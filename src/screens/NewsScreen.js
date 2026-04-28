@@ -1,114 +1,170 @@
-import React from 'react';
+// src/screens/NewsScreen.js
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Image,
-  ScrollView,
+  FlatList,
+  ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { GNEWS_API_KEY } from '@env'; // 🔥 make sure to add GNEWS_API_KEY in .env
 
-const NEWS_CATEGORIES = [
-  {
-    id: 'city-news',
-    title: 'City News',
-    image: require('../../assets/news-city.jpg'),
-  },
-  {
-    id: 'good-places',
-    title: 'Good Places',
-    image: require('../../assets/news-places.jpg'),
-  },
-  {
-    id: 'new-train',
-    title: 'New Train',
-    image: require('../../assets/news-train.jpg'),
-  },
-  {
-    id: 'climate',
-    title: 'Climate',
-    image: require('../../assets/news-climate.jpg'),
-  },
-];
+const API_KEY = GNEWS_API_KEY; // 🔥 replace
 
-export default function NewsScreen({ route, navigation }) {
-  const city = route?.params?.city || 'Your city';
+export default function NewsScreen({ navigation }) {
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handlePress = (category) => {
-    navigation.navigate('NewsDetails', { category, city });
+  useEffect(() => {
+    fetchNews();
+  }, []);
+
+  const fetchNews = async () => {
+    try {
+      const res = await fetch(
+        `https://gnews.io/api/v4/search?q=india&lang=en&country=in&max=10&apikey=${API_KEY}`
+      );
+
+      const data = await res.json();
+
+      setNews(data.articles); // ✅ IMPORTANT
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handlePress = (item) => {
+    navigation.navigate('NewsDetails', { article: item });
+  };
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.85}
+      onPress={() => handlePress(item)}
+    >
+      <Image
+        source={{
+          uri:
+            item.image ||
+            'https://via.placeholder.com/300x150.png?text=No+Image',
+        }}
+        style={styles.image}
+      />
+
+      <View style={styles.overlay} />
+
+      <Text style={styles.cardTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
+
+      <Text style={styles.source}>
+        {item.source?.name}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
-      {/* Top bar */}
+      <StatusBar barStyle="dark-content" />
+
+      {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#555" />
+          <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.title}>Explore</Text>
-        <View style={{ width: 24 }} />
+
+        <Text style={styles.title}>Latest News</Text>
+
+        <Ionicons name="newspaper-outline" size={22} color="#333" />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {NEWS_CATEGORIES.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.card}
-            activeOpacity={0.85}
-            onPress={() => handlePress(item)}
-          >
-            <Image source={item.image} style={styles.image} />
-            <View style={styles.overlay} />
-            <Text style={styles.cardTitle}>{item.title}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {loading ? (
+        <ActivityIndicator size="large" color="#7EC7FF" />
+      ) : (
+        <FlatList
+          data={news}
+          keyExtractor={(item) => item.url}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EDEDED', paddingTop: 40 },
+  container: {
+    flex: 1,
+    backgroundColor: '#F4F7FB',
+    paddingTop: 40,
+  },
+
   topBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 12,
-    justifyContent: 'space-between',
+    marginBottom: 10,
   },
+
   title: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#444',
+    fontWeight: '700',
+    color: '#222',
   },
+
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
+
   card: {
-    borderRadius: 26,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 14,
-    backgroundColor: '#ccc',
+    backgroundColor: '#ddd',
+
+    // ✨ shadow
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
+
   image: {
     width: '100%',
-    height: 150,
+    height: 170,
   },
+
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.25)',
   },
+
   cardTitle: {
     position: 'absolute',
-    left: 20,
-    top: 18,
-    fontSize: 18,
-    fontWeight: '600',
+    left: 16,
+    bottom: 36,
+    right: 16,
+    fontSize: 16,
+    fontWeight: '700',
     color: '#fff',
+  },
+
+  source: {
+    position: 'absolute',
+    left: 16,
+    bottom: 12,
+    fontSize: 12,
+    color: '#EAF7FF',
   },
 });

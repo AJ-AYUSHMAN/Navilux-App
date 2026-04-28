@@ -16,8 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Prefer reading the API key from .env; fallback to your hardcoded key
 // Add to .env: OPENWEATHER_API_KEY=your_key_here
-import { OPENWEATHER_API_KEY as ENV_OPENWEATHER_KEY } from '@env';
-const OPENWEATHER_API_KEY = ENV_OPENWEATHER_KEY || '0f7bc8ce84b7b66d8ba9df224f55d38d';
+import { WEATHER_API_KEY as ENV_OPENWEATHER_KEY } from '@env';
+const OPENWEATHER_API_KEY = ENV_OPENWEATHER_KEY;
 
 export default function WeatherScreen({ route, navigation }) {
   // route.params may contain:

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "navilux",
+    "name": "Navilux",
     "slug": "navilux",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,10 +20,19 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.ajayushman.navilux"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "76e667a1-76ba-4887-9d3f-14fc7382a2df"
+      }
     }
   }
 }

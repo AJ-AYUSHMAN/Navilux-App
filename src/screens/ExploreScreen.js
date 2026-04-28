@@ -1,64 +1,129 @@
 // src/screens/ExploreScreen.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Image,
   FlatList,
+  ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const PLACES = [
-  {
-    id: '1',
-    title: 'Sunrise Viewpoint',
-    subtitle: 'Best spot for morning hikes',
-    distance: '3.2 km',
-    rating: 4.7,
-    image: require('../../assets/explore1.jpg'),
-  },
-  {
-    id: '2',
-    title: 'Canyon Trail',
-    subtitle: 'Popular trekking route',
-    distance: '7.5 km',
-    rating: 4.5,
-    image: require('../../assets/explore2.jpg'),
-  },
-  {
-    id: '3',
-    title: 'Lakeside Camp',
-    subtitle: 'Perfect for a weekend camp',
-    distance: '12 km',
-    rating: 4.8,
-    image: require('../../assets/explore3.jpg'),
-  },
-];
+import { GEOAPIFY_API_KEY as GEO_API_KEY } from '@env';
 
 export default function ExploreScreen({ route, navigation }) {
-  const city = route?.params?.city || 'Your area';
+  const city = route?.params?.city || 'Jaipur';
 
+  const [places, setPlaces] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPlaces();
+  }, []);
+
+  // 🔥 Get coordinates safely
+  const getCoordinates = async () => {
+    try {
+      const res = await fetch(
+        `https://api.geoapify.com/v1/geocode/search?text=${city}&apiKey=${GEO_API_KEY}`
+      );
+
+      const data = await res.json();
+
+      if (!data.features || data.features.length === 0) {
+        return null;
+      }
+
+      const { lat, lon } = data.features[0].properties;
+      return { lat, lon };
+
+    } catch (err) {
+      console.log(err);
+      return null;
+    }
+  };
+
+  // 🔥 Fetch places
+  const fetchPlaces = async () => {
+    try {
+      const coords = await getCoordinates();
+
+      if (!coords) {
+        setPlaces([]);
+        return;
+      }
+
+      let res = await fetch(
+        `https://api.geoapify.com/v2/places?categories=tourism,leisure,natural&filter=circle:${coords.lon},${coords.lat},20000&limit=10&apiKey=${GEO_API_KEY}`
+      );
+
+      let data = await res.json();
+
+      // fallback
+      if (!data.features || data.features.length === 0) {
+        res = await fetch(
+          `https://api.geoapify.com/v2/places?categories=tourism&filter=circle:${coords.lon},${coords.lat},50000&limit=10&apiKey=${GEO_API_KEY}`
+        );
+
+        data = await res.json();
+      }
+
+      if (!data.features || data.features.length === 0) {
+        setPlaces([]);
+        return;
+      }
+
+      const formatted = data.features.map((item, index) => {
+        const p = item.properties;
+
+        return {
+          id: index.toString(),
+
+          title: p.name || p.address_line1 || "Unknown Place",
+          subtitle: p.address_line2 || p.city || city,
+
+          distance: p.distance
+            ? (p.distance / 1000).toFixed(1) + " km"
+            : "Nearby",
+
+          // 🔥 different image per card
+          image: `https://picsum.photos/400/300?random=${index + 1}`,
+
+          rating: (Math.random() * (5 - 4) + 4).toFixed(1),
+        };
+      });
+
+      setPlaces(formatted);
+
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔥 Card UI
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      <Image source={item.image} style={styles.image} />
+      <Image source={{ uri: item.image }} style={styles.image} />
+
       <View style={styles.overlay} />
 
       <View style={styles.infoTop}>
-        <Text style={styles.placeTitle}>{item.title}</Text>
-        <Text style={styles.placeSubtitle}>{item.subtitle}</Text>
+        <Text style={styles.placeTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="location-outline" size={14} color="#fff" />
-            <Text style={styles.metaText}>{item.distance}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="star" size={14} color="#FFD75E" />
-            <Text style={styles.metaText}>{item.rating}</Text>
-          </View>
-        </View>
+        <Text style={styles.placeSubtitle} numberOfLines={1}>
+          {item.subtitle}
+        </Text>
+      </View>
+
+      <View style={styles.bottomRow}>
+        <Text style={styles.metaText}>📍 {item.distance}</Text>
+        <Text style={styles.metaText}>⭐ {item.rating}</Text>
       </View>
 
       <TouchableOpacity
@@ -67,35 +132,54 @@ export default function ExploreScreen({ route, navigation }) {
           navigation.navigate('ExploreDetails', { place: item, city })
         }
       >
-        <Text style={styles.detailsText}>Get Details</Text>
+        <Text style={styles.detailsText}>Details</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Top bar */}
+      
+      {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#555" />
+          <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>Explore places around {city}</Text>
+
+        <Text style={styles.topTitle}>
+          Explore places around {city}
+        </Text>
+
         <View style={{ width: 24 }} />
       </View>
 
-      <FlatList
-        data={PLACES}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#7EC7FF" />
+      ) : places.length === 0 ? (
+        <Text style={styles.emptyText}>
+          No places found nearby
+        </Text>
+      ) : (
+        <FlatList
+          data={places}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
 
+// 🎨 Styles
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EDEDED', paddingTop: 40 },
+  container: {
+    flex: 1,
+    backgroundColor: '#EDEDED',
+    paddingTop: 40,
+  },
+
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -103,6 +187,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     justifyContent: 'space-between',
   },
+
   topTitle: {
     flex: 1,
     textAlign: 'center',
@@ -111,66 +196,79 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginHorizontal: 8,
   },
+
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
+
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#777',
+  },
+
   card: {
     borderRadius: 24,
     overflow: 'hidden',
     marginBottom: 16,
     backgroundColor: '#000',
   },
+
   image: {
     width: '100%',
     height: 220,
   },
+
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.25)',
   },
+
   infoTop: {
     position: 'absolute',
-    left: 18,
     top: 16,
-    right: 18,
+    left: 16,
+    right: 16,
   },
+
   placeTitle: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
   },
+
   placeSubtitle: {
-    color: '#f4f4f4',
+    color: '#eee',
     fontSize: 13,
-    marginTop: 6,
+    marginTop: 4,
   },
-  metaRow: {
+
+  bottomRow: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
     flexDirection: 'row',
-    marginTop: 10,
+    gap: 12,
   },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-  },
+
   metaText: {
     color: '#fff',
     fontSize: 12,
-    marginLeft: 4,
   },
+
   detailsBtn: {
     position: 'absolute',
-    right: 16,
     bottom: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 24,
+    right: 16,
     backgroundColor: '#000',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
+
   detailsText: {
     color: '#fff',
-    fontSize: 14,
     fontWeight: '600',
   },
 });

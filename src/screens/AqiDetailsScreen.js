@@ -98,7 +98,7 @@ export default function AqiDetailsScreen({ route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#EDEDED' },
-  city: { fontSize: 16, fontWeight: '600', marginBottom: 8, color: '#333' },
+  city: { fontSize: 16, fontWeight: '600', marginBottom: 8, marginTop: 30, color: '#333' },
   aqiCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,

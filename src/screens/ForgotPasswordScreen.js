@@ -82,9 +82,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   logo: {
-    width: 200,
+    width: 300,
     height: 90,
-    marginBottom: 40,
+    marginBottom: 20,
   },
   input: {
     width: '100%',

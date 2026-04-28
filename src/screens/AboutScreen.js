@@ -25,13 +25,13 @@ export default function AboutScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#EDEDED' },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 10, color: '#333' },
+  title: { fontSize: 20, fontWeight: '700', marginBottom: 10, marginTop: 30, color: '#333' },
   text: { fontSize: 13, color: '#555', marginBottom: 8 },
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
-    marginTop: 10,
+    marginTop: 0,
   },
   sectionTitle: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
 });

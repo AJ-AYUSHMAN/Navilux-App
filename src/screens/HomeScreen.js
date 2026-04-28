@@ -43,7 +43,7 @@ export default function HomeScreen({ navigation }) {
           longitude,
         });
 
-        const detectedCity = geo[0]?.city || 'Phagwara';
+        const detectedCity = geo[0]?.city || geo[0]?.region || 'Unknown Location';
         setCity(detectedCity);
         setDisplayCity(detectedCity);
 
@@ -221,7 +221,7 @@ export default function HomeScreen({ navigation }) {
             style={styles.metricCard}
             onPress={() => navigation.navigate('Network')}
           >
-            <Text style={styles.metricLabel}>Airtel</Text>
+            <Text style={styles.metricLabel}>Network</Text>
             <Text style={styles.metricValue}>Info</Text>
           </TouchableOpacity>
 
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   weatherCard: {
-    flex: 1,
+    flex: 1.5,
     marginLeft: 10,
     borderRadius: 18,
     backgroundColor: '#FFFFFF',
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingVertical: 10,
+    paddingVertical: 20,
     marginHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -399,19 +399,19 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     marginTop: 4,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   newsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    marginTop: 8,
+    borderRadius: 10,
+    padding: 30,
+    marginTop: 14,
   },
   newsContent: {},
   newsTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     marginBottom: 4,
   },
   newsSubtitle: {

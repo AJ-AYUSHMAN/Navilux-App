@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-// App.js
 import React, { useRef, useState } from 'react';
 import {
   NavigationContainer,
@@ -7,6 +5,7 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+/* Screens */
 import SplashScreen from './src/screens/SplashScreen';
 import AuthStartScreen from './src/screens/AuthStartScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -46,13 +45,28 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const navigationRef = useNavigationContainerRef();
   const routeNameRef = useRef();
+
   const [currentRouteName, setCurrentRouteName] = useState('Splash');
+
+  // 🔥 Auth state (change this later using AsyncStorage)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // 🚫 Routes where chat button should NOT appear
+  const hideChatRoutes = [
+    'Splash',
+    'Login',
+    'Signup',
+    'AuthStart',
+    'Chat',
+    'Map',
+  ];
 
   return (
     <NavigationContainer
       ref={navigationRef}
       onReady={() => {
-        const initialName = navigationRef.getCurrentRoute()?.name || 'Splash';
+        const initialName =
+          navigationRef.getCurrentRoute()?.name || 'Splash';
         routeNameRef.current = initialName;
         setCurrentRouteName(initialName);
       }}
@@ -65,87 +79,106 @@ export default function App() {
       }}
     >
       <>
-        <Stack.Navigator
-          initialRouteName="Splash"
-          screenOptions={{ headerShown: false }}
-        >
-          {/* Auth flow */}
-          <Stack.Screen name="Splash" component={SplashScreen} />
-          <Stack.Screen name="AuthStart" component={AuthStartScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Signup" component={SignupScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          
+          {/* 🔐 AUTH FLOW */}
+          {!isLoggedIn ? (
+            <>
+              <Stack.Screen name="Splash">
+                {(props) => (
+                  <SplashScreen
+                    {...props}
+                    setIsLoggedIn={setIsLoggedIn}
+                  />
+                )}
+              </Stack.Screen>
 
-          {/* Main app */}
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="Map" component={MapScreen} />
-          <Stack.Screen name="Weather" component={WeatherScreen} />
+              <Stack.Screen name="AuthStart" component={AuthStartScreen} />
 
-          {/* Explore / News */}
-          <Stack.Screen name="Explore" component={ExploreScreen} />
-          <Stack.Screen
-            name="ExploreDetails"
-            component={ExploreDetailsScreen}
-          />
-          <Stack.Screen name="News" component={NewsScreen} />
-          <Stack.Screen name="NewsDetails" component={NewsDetailsScreen} />
+              <Stack.Screen name="Login">
+                {(props) => (
+                  <LoginScreen
+                    {...props}
+                    setIsLoggedIn={setIsLoggedIn}
+                  />
+                )}
+              </Stack.Screen>
 
-          {/* Profile & info */}
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-          <Stack.Screen name="About" component={AboutScreen} />
-          <Stack.Screen name="FAQ" component={FaqScreen} />
-          <Stack.Screen
-            name="PersonalInfo"
-            component={PersonalInfoScreen}
-          />
-          <Stack.Screen name="Security" component={SecurityScreen} />
-          <Stack.Screen
-            name="TravelPreferences"
-            component={TravelPreferencesScreen}
-          />
+              <Stack.Screen name="Signup">
+                {(props) => (
+                  <SignupScreen {...props} setIsLoggedIn={setIsLoggedIn} />
+                  )}
+              </Stack.Screen>
+              
+              <Stack.Screen
+                name="ForgotPassword"
+                component={ForgotPasswordScreen}
+              />
+            </>
+          ) : (
+            /* 🏠 MAIN APP */
+            <>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Map" component={MapScreen} />
+              <Stack.Screen name="Weather" component={WeatherScreen} />
 
-          {/* Environment & network */}
-          <Stack.Screen name="AqiDetails" component={AqiDetailsScreen} />
-          <Stack.Screen name="Oxygen" component={OxygenScreen} />
-          <Stack.Screen name="Crime" component={CrimeScreen} />
-          <Stack.Screen name="Network" component={NetworkScreen} />
+              {/* Explore */}
+              <Stack.Screen name="Explore" component={ExploreScreen} />
+              <Stack.Screen
+                name="ExploreDetails"
+                component={ExploreDetailsScreen}
+              />
 
-          {/* Search */}
-          <Stack.Screen
-            name="CitySearchResults"
-            component={CitySearchResultsScreen}
-          />
+              {/* News */}
+              <Stack.Screen name="News" component={NewsScreen} />
+              <Stack.Screen
+                name="NewsDetails"
+                component={NewsDetailsScreen}
+              />
 
-          {/* Chat */}
-          <Stack.Screen name="Chat" component={ChatScreen} />
+              {/* Profile */}
+              
+              <Stack.Screen name="Profile">
+                {(props) => (
+                  <ProfileScreen {...props} setIsLoggedIn={setIsLoggedIn} />
+                  )}
+              </Stack.Screen>
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+              <Stack.Screen name="About" component={AboutScreen} />
+              <Stack.Screen name="FAQ" component={FaqScreen} />
+              <Stack.Screen
+                name="PersonalInfo"
+                component={PersonalInfoScreen}
+              />
+              <Stack.Screen name="Security" component={SecurityScreen} />
+              <Stack.Screen
+                name="TravelPreferences"
+                component={TravelPreferencesScreen}
+              />
+
+              {/* Environment */}
+              <Stack.Screen name="AqiDetails" component={AqiDetailsScreen} />
+              <Stack.Screen name="Oxygen" component={OxygenScreen} />
+              <Stack.Screen name="Crime" component={CrimeScreen} />
+              <Stack.Screen name="Network" component={NetworkScreen} />
+
+              {/* Search */}
+              <Stack.Screen
+                name="CitySearchResults"
+                component={CitySearchResultsScreen}
+              />
+
+              {/* Chat */}
+              <Stack.Screen name="Chat" component={ChatScreen} />
+            </>
+          )}
         </Stack.Navigator>
 
-        {/* Floating button on all screens EXCEPT Chat */}
-        {currentRouteName !== 'Chat' && <FloatingChatButton />}
+        {/* 💬 Floating Chat Button */}
+        {!hideChatRoutes.includes(currentRouteName) && isLoggedIn && (
+          <FloatingChatButton />
+        )}
       </>
     </NavigationContainer>
   );
 }
-=======
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
-
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
->>>>>>> 99677c5 (Initial commit)

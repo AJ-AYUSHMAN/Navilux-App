@@ -12,21 +12,45 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import * as ImagePicker from 'expo-image-picker';
 import { auth } from '../config/firebaseConfig';
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
+import { updateProfile } from 'firebase/auth';
 
-export default function ProfileScreen({ navigation }) {
+/* 🌗 THEMES */
+const lightTheme = {
+  background: '#EDEDED',
+  card: '#FFFFFF',
+  text: '#333',
+  subText: '#777',
+};
+
+const darkTheme = {
+  background: '#121212',
+  card: '#1E1E1E',
+  text: '#FFFFFF',
+  subText: '#AAAAAA',
+};
+
+export default function ProfileScreen({ navigation, setIsLoggedIn }) {
   const [userProfile, setUserProfile] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const theme = darkMode ? darkTheme : lightTheme;
 
   useEffect(() => {
     const current = auth.currentUser;
 
-    if (!current) {
-      navigation.replace('AuthStart');
-      return;
-    }
+    if (!current) return;
+
+    setImage(current.photoURL);
 
     const profile = {
       name: current.displayName || 'Navilux Traveller',
@@ -39,15 +63,60 @@ export default function ProfileScreen({ navigation }) {
 
     setUserProfile(profile);
     setLoading(false);
-  }, [navigation]);
+  }, []);
 
+  /* 📸 Pick Image */
+  const pickImage = async () => {
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      alert('Permission required');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      uploadImage(result.assets[0].uri);
+    }
+  };
+
+  /* 🔥 Upload Image */
+  const uploadImage = async (uri) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const storage = getStorage();
+      const user = auth.currentUser;
+
+      const storageRef = ref(storage, `profileImages/${user.uid}`);
+
+      await uploadBytes(storageRef, blob);
+
+      const downloadURL = await getDownloadURL(storageRef);
+
+      await updateProfile(user, {
+        photoURL: downloadURL,
+      });
+
+      setImage(downloadURL);
+    } catch (error) {
+      console.log(error);
+      alert('Upload failed');
+    }
+  };
+
+  /* 🚪 Logout */
   const handleLogout = async () => {
     try {
-      await auth.signOut(); // compat signOut
-      navigation.replace('AuthStart');
+      await auth.signOut();
+      setIsLoggedIn(false); // 🔥 IMPORTANT
     } catch (err) {
-      console.log('Logout error:', err);
-      alert('Error logging out. Please try again.');
+      console.log(err);
     }
   };
 
@@ -56,7 +125,7 @@ export default function ProfileScreen({ navigation }) {
       <View
         style={[
           styles.container,
-          { justifyContent: 'center', alignItems: 'center' },
+          { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' },
         ]}
       >
         <ActivityIndicator size="large" color="#7EC7FF" />
@@ -67,179 +136,115 @@ export default function ProfileScreen({ navigation }) {
   const user = userProfile;
 
   return (
-    <View style={styles.container}>
-      {/* Top bar */}
-      <View className="topBar" style={styles.topBar}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      
+      {/* Top Bar */}
+      <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#555" />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.topTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => console.log('Edit profile')}>
-          <Ionicons name="create-outline" size={22} color="#555" />
-        </TouchableOpacity>
+        <Text style={[styles.topTitle, { color: theme.text }]}>Profile</Text>
+        <Ionicons name="create-outline" size={22} color={theme.text} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header card */}
-        <View style={styles.headerCard}>
+      <ScrollView contentContainerStyle={styles.content}>
+        
+        {/* Header */}
+        <View style={[styles.headerCard, { backgroundColor: theme.card }]}>
+          
           <View style={styles.avatarWrapper}>
             <Image
-              source={require('../../assets/avatar-placeholder.png')}
+              source={
+                image
+                  ? { uri: image }
+                  : require('../../assets/avatar-placeholder.png')
+              }
               style={styles.avatar}
             />
-            <TouchableOpacity
-              style={styles.avatarEdit}
-              onPress={() => console.log('Change avatar')}
-            >
+            <TouchableOpacity style={styles.avatarEdit} onPress={pickImage}>
               <Ionicons name="camera" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.name}>{user.name}</Text>
-          <Text style={styles.email}>{user.email}</Text>
-          <Text style={styles.city}>{user.city}</Text>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.trips}</Text>
-              <Text style={styles.statLabel}>Trips</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.savedPlaces}</Text>
-              <Text style={styles.statLabel}>Saved</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.daysActive}</Text>
-              <Text style={styles.statLabel}>Days Active</Text>
-            </View>
-          </View>
+          <Text style={[styles.name, { color: theme.text }]}>{user.name}</Text>
+          <Text style={[styles.email, { color: theme.subText }]}>{user.email}</Text>
+          <Text style={[styles.city, { color: theme.subText }]}>{user.city}</Text>
         </View>
 
         {/* Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subText }]}>
+            Preferences
+          </Text>
 
           <View style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="moon-outline" size={20} color="#555" />
-              <Text style={styles.rowText}>Dark mode</Text>
-            </View>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              thumbColor={darkMode ? '#7EC7FF' : '#f4f3f4'}
-            />
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              Dark mode
+            </Text>
+            <Switch value={darkMode} onValueChange={setDarkMode} />
           </View>
-
-          <View style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Ionicons
-                name="notifications-outline"
-                size={20}
-                color="#555"
-              />
-              <Text style={styles.rowText}>Push notifications</Text>
-            </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              thumbColor={notificationsEnabled ? '#7EC7FF' : '#f4f3f4'}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => console.log('Language pressed')}
-          >
-            <View style={styles.rowLeft}>
-              <Ionicons name="globe-outline" size={20} color="#555" />
-              <Text style={styles.rowText}>Language</Text>
-            </View>
-            <Text style={styles.rowRightText}>English</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Account */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subText }]}>
+            Account
+          </Text>
 
           <TouchableOpacity
             style={styles.row}
-            onPress={() => console.log('Edit personal info')}
+            onPress={() => navigation.navigate('PersonalInfo')}
           >
-            <View style={styles.rowLeft}>
-              <Ionicons name="person-outline" size={20} color="#555" />
-              <Text style={styles.rowText}>Personal information</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              Personal Information
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.row}
-            onPress={() => console.log('Security pressed')}
+            onPress={() => navigation.navigate('Security')}
           >
-            <View style={styles.rowLeft}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={20}
-                color="#555"
-              />
-              <Text style={styles.rowText}>Security</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              Security
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.row}
-            onPress={() => console.log('Travel preferences')}
+            onPress={() => navigation.navigate('TravelPreferences')}
           >
-            <View style={styles.rowLeft}>
-              <Ionicons name="airplane-outline" size={20} color="#555" />
-              <Text style={styles.rowText}>Travel preferences</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              Travel Preferences
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Help & about */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Help & About</Text>
+        {/* Help */}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subText }]}>
+            Help & About
+          </Text>
 
           <TouchableOpacity
             style={styles.row}
-            onPress={() => console.log('FAQ')}
+            onPress={() => navigation.navigate('FAQ')}
           >
-            <View style={styles.rowLeft}>
-              <Ionicons
-                name="help-circle-outline"
-                size={20}
-                color="#555"
-              />
-              <Text style={styles.rowText}>FAQ & support</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              FAQ
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.row}
-            onPress={() => console.log('About Navilux')}
+            onPress={() => navigation.navigate('About')}
           >
-            <View style={styles.rowLeft}>
-              <Ionicons
-                name="information-circle-outline"
-                size={20}
-                color="#555"
-              />
-              <Text style={styles.rowText}>About Navilux</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              About Navilux
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Logout button */}
+        {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#fff" />
           <Text style={styles.logoutText}>Log out</Text>
@@ -251,98 +256,88 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
+/* 🎨 Styles */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EDEDED', paddingTop: 40 },
+  container: { flex: 1, paddingTop: 40 },
+
   topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
     marginBottom: 10,
   },
-  topTitle: { fontSize: 18, fontWeight: '600', color: '#444' },
-  content: { paddingHorizontal: 16, paddingBottom: 20 },
+
+  topTitle: { fontSize: 18, fontWeight: '600' },
+
+  content: { paddingHorizontal: 16 },
 
   headerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingVertical: 18,
+    borderRadius: 20,
+    padding: 20,
     alignItems: 'center',
     marginBottom: 16,
   },
+
   avatarWrapper: {
     width: 90,
     height: 90,
     borderRadius: 45,
     overflow: 'hidden',
-    marginBottom: 10,
   },
+
   avatar: { width: '100%', height: '100%' },
+
   avatarEdit: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
+    bottom: 0,
+    right: 0,
     backgroundColor: '#7EC7FF',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 10,
+    padding: 4,
   },
-  name: { fontSize: 18, fontWeight: '700', color: '#333', marginTop: 4 },
-  email: { fontSize: 13, color: '#777', marginTop: 2 },
-  city: { fontSize: 13, color: '#999', marginTop: 2 },
 
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: 14,
-    width: '80%',
-    justifyContent: 'space-between',
-  },
-  statItem: { alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: '700', color: '#333' },
-  statLabel: { fontSize: 12, color: '#888', marginTop: 2 },
+  name: { fontSize: 18, fontWeight: '700', marginTop: 10 },
+
+  email: { fontSize: 13, marginTop: 2 },
+
+  city: { fontSize: 13, marginTop: 2 },
 
   section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 16,
+    padding: 14,
     marginBottom: 12,
   },
+
   sectionTitle: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 6,
+    marginBottom: 8,
   },
+
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
     justifyContent: 'space-between',
+    paddingVertical: 8,
   },
-  rowLeft: { flexDirection: 'row', alignItems: 'center' },
-  rowText: { marginLeft: 10, fontSize: 14, color: '#444' },
-  rowRightText: { fontSize: 13, color: '#777' },
+
+  rowText: { fontSize: 14 },
 
   logoutBtn: {
-    marginTop: 4,
     backgroundColor: '#FF5C5C',
     borderRadius: 24,
-    paddingVertical: 12,
+    padding: 12,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
   },
+
   logoutText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
     marginLeft: 6,
+    fontWeight: '600',
   },
+
   versionText: {
-    marginTop: 8,
+    marginTop: 10,
     textAlign: 'center',
     fontSize: 11,
     color: '#999',

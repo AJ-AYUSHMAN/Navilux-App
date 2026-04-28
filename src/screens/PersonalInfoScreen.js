@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 export default function PersonalInfoScreen() {
-  const [name, setName] = useState('Ayushman Raj');
+  const [name, setName] = useState('Name');
   const [email, setEmail] = useState('navilux.user@example.com');
-  const [city, setCity] = useState('Phagwara');
+  const [city, setCity] = useState('City');
 
   const handleSave = () => {
     // TODO: update Firestore profile
@@ -40,7 +40,7 @@ export default function PersonalInfoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#EDEDED' },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 14, color: '#333' },
+  title: { fontSize: 20, fontWeight: '700', marginBottom: 14, marginTop: 20, color: '#333' },
   label: { fontSize: 13, color: '#555', marginTop: 10 },
   input: {
     backgroundColor: '#FFFFFF',

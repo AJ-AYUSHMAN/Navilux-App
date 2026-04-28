@@ -10,12 +10,13 @@ import {
 } from 'react-native';
 
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebaseConfig'; // 👈 correct import
+import { auth } from '../config/firebaseConfig';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, setIsLoggedIn }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // 👈 NEW
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -25,9 +26,14 @@ export default function LoginScreen({ navigation }) {
 
     try {
       setLoading(true);
+
       await signInWithEmailAndPassword(auth, email.trim(), password);
 
-      navigation.replace('Home'); // 👈 go to home after login
+      // 🔥 IMPORTANT (new flow)
+      setIsLoggedIn(true);
+
+      
+
     } catch (err) {
       console.log(err);
       alert(err.message);
@@ -44,6 +50,7 @@ export default function LoginScreen({ navigation }) {
         resizeMode="contain"
       />
 
+      {/* Email */}
       <TextInput
         placeholder="Enter your email address"
         placeholderTextColor="#B0B0B0"
@@ -53,20 +60,32 @@ export default function LoginScreen({ navigation }) {
         keyboardType="email-address"
       />
 
-      <TextInput
-        placeholder="Enter your password"
-        placeholderTextColor="#B0B0B0"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-      />
+      {/* Password with toggle */}
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Enter your password"
+          placeholderTextColor="#B0B0B0"
+          secureTextEntry={!showPassword}
+          value={password}
+          onChangeText={setPassword}
+          style={styles.passwordInput}
+        />
 
+        <TouchableOpacity
+          onPress={() => setShowPassword(!showPassword)}
+        >
+          <Text style={styles.toggleText}>
+            {showPassword ? 'Hide' : 'Show'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Forgot */}
       <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
         <Text style={styles.forgot}>Forgot Password?</Text>
       </TouchableOpacity>
 
-      {/* Login Button */}
+      {/* Login */}
       <TouchableOpacity
         style={styles.loginButton}
         onPress={handleLogin}
@@ -79,7 +98,7 @@ export default function LoginScreen({ navigation }) {
         )}
       </TouchableOpacity>
 
-      {/* Signup Navigation */}
+      {/* Signup */}
       <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
         <Text style={styles.signupText}>
           Don't have an account?{' '}
@@ -98,11 +117,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+
   logo: {
-    width: 200,
+    width: 300,
     height: 90,
-    marginBottom: 40,
+    marginBottom: 20,
   },
+
   input: {
     width: '100%',
     backgroundColor: '#FFFFFF',
@@ -113,11 +134,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#555',
   },
+
+  passwordContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    marginVertical: 8,
+    paddingHorizontal: 20,
+  },
+
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#555',
+  },
+
+  toggleText: {
+    color: '#7EC7FF',
+    fontWeight: '600',
+  },
+
   forgot: {
     marginVertical: 6,
     color: '#777',
     textDecorationLine: 'underline',
   },
+
   loginButton: {
     backgroundColor: '#7EC7FF',
     width: 150,
@@ -126,16 +171,19 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginTop: 12,
   },
+
   loginText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
+
   signupText: {
     marginTop: 16,
     color: '#555',
     fontSize: 14,
   },
+
   signupLink: {
     color: '#7EC7FF',
     fontWeight: '600',

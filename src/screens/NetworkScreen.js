@@ -9,7 +9,7 @@ export default function NetworkScreen({ route }) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>Network coverage</Text>
-      <Text style={styles.city}>{city || 'Your area'} • Airtel</Text>
+      <Text style={styles.city}>{city || 'Your area'} • Jio</Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Signal strength</Text>
@@ -18,15 +18,15 @@ export default function NetworkScreen({ route }) {
             <View key={v} style={[styles.bar, v <= 3 && styles.barActive]} />
           ))}
         </View>
-        <Text style={styles.smallText}>Good 4G / upcoming 5G support.</Text>
+        <Text style={styles.smallText}>Good 5G support</Text>
       </View>
 
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <Text style={styles.sectionTitle}>Speed (placeholder)</Text>
         <Text style={styles.text}>Download: 45 Mbps</Text>
         <Text style={styles.text}>Upload: 15 Mbps</Text>
         <Text style={styles.text}>Latency: 24 ms</Text>
-      </View>
+      </View> */}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Tips</Text>
@@ -49,7 +49,7 @@ function Row({ icon, label }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#EDEDED' },
-  title: { fontSize: 20, fontWeight: '700', color: '#333' },
+  title: { fontSize: 20, fontWeight: '700', marginTop: 30, color: '#333' },
   city: { fontSize: 13, color: '#777', marginBottom: 10 },
   card: {
     backgroundColor: '#FFFFFF',

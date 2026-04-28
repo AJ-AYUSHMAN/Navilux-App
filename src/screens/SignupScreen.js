@@ -9,24 +9,35 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebaseConfig'; // 👈 correct firebase import
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from 'firebase/auth';
 
-export default function SignupScreen({ navigation }) {
+import { auth } from '../config/firebaseConfig';
+
+export default function SignupScreen({ navigation, setIsLoggedIn }) {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
       alert('Please fill all fields');
       return;
     }
+
     if (password !== confirmPassword) {
       alert('Passwords do not match');
       return;
     }
+
     if (password.length < 6) {
       alert('Password must be at least 6 characters');
       return;
@@ -34,12 +45,22 @@ export default function SignupScreen({ navigation }) {
 
     try {
       setLoading(true);
-      await createUserWithEmailAndPassword(auth, email.trim(), password);
 
-      navigation.replace('Home'); // 👈 Go to Home after successful signup
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+
+      await updateProfile(userCredential.user, {
+        displayName: name,
+      });
+
+      setIsLoggedIn(true);
+
     } catch (err) {
       console.log(err);
-      alert(err.message); // Firebase gives readable errors
+      alert(err.message);
     } finally {
       setLoading(false);
     }
@@ -53,6 +74,16 @@ export default function SignupScreen({ navigation }) {
         resizeMode="contain"
       />
 
+      {/* Name */}
+      <TextInput
+        placeholder="Enter your name"
+        placeholderTextColor="#B0B0B0"
+        value={name}
+        onChangeText={setName}
+        style={styles.input}
+      />
+
+      {/* Email */}
       <TextInput
         placeholder="Enter your email address"
         placeholderTextColor="#B0B0B0"
@@ -62,24 +93,41 @@ export default function SignupScreen({ navigation }) {
         keyboardType="email-address"
       />
 
-      <TextInput
-        placeholder="Enter your password"
-        placeholderTextColor="#B0B0B0"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-      />
+      {/* Password */}
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Enter your password"
+          placeholderTextColor="#B0B0B0"
+          secureTextEntry={!showPassword}
+          value={password}
+          onChangeText={setPassword}
+          style={styles.passwordInput}
+        />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Text style={styles.toggleText}>
+            {showPassword ? 'Hide' : 'Show'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      <TextInput
-        placeholder="Re-type your password"
-        placeholderTextColor="#B0B0B0"
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        style={styles.input}
-      />
+      {/* Confirm Password */}
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Re-type your password"
+          placeholderTextColor="#B0B0B0"
+          secureTextEntry={!showConfirm}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          style={styles.passwordInput}
+        />
+        <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
+          <Text style={styles.toggleText}>
+            {showConfirm ? 'Hide' : 'Show'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
+      {/* Signup Button */}
       <TouchableOpacity
         style={styles.signupButton}
         onPress={handleSignup}
@@ -88,10 +136,11 @@ export default function SignupScreen({ navigation }) {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.signupButtonText}>Sign up</Text>
+          <Text style={styles.signupTextBtn}>Sign up</Text>
         )}
       </TouchableOpacity>
 
+      {/* Login Navigation */}
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.loginText}>
           Already have an account?{' '}
@@ -110,11 +159,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+
   logo: {
-    width: 200,
+    width: 300,
     height: 90,
-    marginBottom: 40,
+    marginBottom: 20,
   },
+
   input: {
     width: '100%',
     backgroundColor: '#FFFFFF',
@@ -125,6 +176,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#555',
   },
+
+  passwordContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    marginVertical: 8,
+    paddingHorizontal: 20,
+  },
+
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#555',
+  },
+
+  toggleText: {
+    color: '#7EC7FF',
+    fontWeight: '600',
+  },
+
   signupButton: {
     backgroundColor: '#7EC7FF',
     width: 150,
@@ -133,16 +207,19 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginTop: 12,
   },
-  signupButtonText: {
+
+  signupTextBtn: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
+
   loginText: {
     marginTop: 16,
     color: '#555',
     fontSize: 14,
   },
+
   loginLink: {
     color: '#7EC7FF',
     fontWeight: '600',
