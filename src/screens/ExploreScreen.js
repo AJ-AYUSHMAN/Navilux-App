@@ -1,5 +1,5 @@
 // src/screens/ExploreScreen.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,20 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { GEOAPIFY_API_KEY as GEO_API_KEY } from '@env';
+import { GEOAPIFY_API_KEY as GEO_API_KEY, PEXELS_API_KEY } from '@env';
+import { ThemeContext } from '../context/ThemeContext';
+import { logScreenView, logAnalyticsEvent } from '../utils/analytics';
 
 export default function ExploreScreen({ route, navigation }) {
+  const { theme, isDarkMode } = useContext(ThemeContext);
   const city = route?.params?.city || 'Phagwara';
 
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    logScreenView('ExploreScreen', 'ExploreScreen');
+    logAnalyticsEvent('explore_places', { city_name: city });
     fetchPlaces();
   }, []);
 
@@ -43,6 +48,40 @@ export default function ExploreScreen({ route, navigation }) {
       console.log(err);
       return null;
     }
+  };
+
+  // 🔥 Fetch Pexels Image
+  const fetchPexelsImage = async (placeName, cityName) => {
+    try {
+      if (!PEXELS_API_KEY) return null;
+      
+      let res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(placeName + ' ' + cityName)}&per_page=1`, {
+        headers: { Authorization: PEXELS_API_KEY }
+      });
+      let data = await res.json();
+
+      if (!data.photos || data.photos.length === 0) {
+        res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(cityName + ' city landmark')}&per_page=15`, {
+          headers: { Authorization: PEXELS_API_KEY }
+        });
+        data = await res.json();
+      }
+      
+      if (!data.photos || data.photos.length === 0) {
+        res = await fetch(`https://api.pexels.com/v1/search?query=beautiful travel destination&per_page=15`, {
+          headers: { Authorization: PEXELS_API_KEY }
+        });
+        data = await res.json();
+      }
+
+      if (data.photos && data.photos.length > 0) {
+        const randomPhoto = data.photos[Math.floor(Math.random() * data.photos.length)];
+        return randomPhoto.src.large;
+      }
+    } catch (error) {
+      console.log("Pexels API Error:", error);
+    }
+    return null;
   };
 
   // 🔥 Fetch places
@@ -75,26 +114,27 @@ export default function ExploreScreen({ route, navigation }) {
         return;
       }
 
-      const formatted = data.features.map((item, index) => {
+      const formattedPromises = data.features.map(async (item, index) => {
         const p = item.properties;
+        const title = p.name || p.address_line1 || "Unknown Place";
+        const subtitle = p.address_line2 || p.city || city;
+        
+        const pexelsImage = await fetchPexelsImage(title, city);
 
         return {
           id: index.toString(),
-
-          title: p.name || p.address_line1 || "Unknown Place",
-          subtitle: p.address_line2 || p.city || city,
-
+          title: title,
+          subtitle: subtitle,
           distance: p.distance
             ? (p.distance / 1000).toFixed(1) + " km"
-            : "Nearby",
-
-          // 🔥 different image per card
-          image: `https://picsum.photos/400/300?random=${index + 1}`,
-
+            : null,
+          // 🔥 fallback to picsum if Pexels fails
+          image: pexelsImage || `https://picsum.photos/400/300?random=${index + 1}`,
           rating: (Math.random() * (5 - 4) + 4).toFixed(1),
         };
       });
 
+      const formatted = await Promise.all(formattedPromises);
       setPlaces(formatted);
 
     } catch (err) {
@@ -122,7 +162,7 @@ export default function ExploreScreen({ route, navigation }) {
       </View>
 
       <View style={styles.bottomRow}>
-        <Text style={styles.metaText}>📍 {item.distance}</Text>
+        {item.distance && <Text style={styles.metaText}>📍 {item.distance}</Text>}
         <Text style={styles.metaText}>⭐ {item.rating}</Text>
       </View>
 
@@ -138,15 +178,15 @@ export default function ExploreScreen({ route, navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       
       {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </TouchableOpacity>
 
-        <Text style={styles.topTitle}>
+        <Text style={[styles.topTitle, { color: theme.text }]}>
           Explore places around {city}
         </Text>
 
@@ -154,9 +194,9 @@ export default function ExploreScreen({ route, navigation }) {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#7EC7FF" />
+        <ActivityIndicator size="large" color={theme.primary} />
       ) : places.length === 0 ? (
-        <Text style={styles.emptyText}>
+        <Text style={[styles.emptyText, { color: theme.subText }]}>
           No places found nearby
         </Text>
       ) : (

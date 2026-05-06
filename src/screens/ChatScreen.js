@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -63,7 +62,6 @@ export default function ChatScreen({ route, navigation }) {
   }, []);
 
   const generateSystemPrompt = () => {
-    
     const safePrefs = preferences.filter(p => p !== 'Vigin Food' && !p.toLowerCase().includes('vigin'));
     return `
 You are Navilux Assistant, an elite AI travel and lifestyle companion inside the "Navilux" app.
@@ -178,9 +176,8 @@ Action Types:
       } catch (e) {}
     }
 
-    // Clean out all markdown asterisks as requested
+    // Clean out all markdown asterisks
     cleanText = cleanText.replace(/\*/g, '').trim();
-
     return { cleanText, action };
   };
 
@@ -215,20 +212,38 @@ Action Types:
         );
 
         const data = await res.json();
-
         if (res.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           return data.candidates[0].content.parts[0].text;
         }
-
       } catch (err) {}
     }
-
     throw new Error("All models failed.");
   };
 
   const renderItem = ({ item }) => {
     const isUser = item.role === 'user';
     const isSystem = item.role === 'system';
+
+    if (item.id === 'welcome') {
+      return (
+        <View style={styles.welcomeContainer}>
+          <LinearGradient
+            colors={isDarkMode ? ['#1e293b', '#0f172a'] : ['#e0f2fe', '#bae6fd']}
+            style={[styles.welcomeCard, { borderColor: theme.border, borderWidth: isDarkMode ? 1 : 0 }]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.welcomeIconWrapper}>
+              <Ionicons name="sparkles" size={28} color="#0284c7" />
+            </View>
+            <Text style={[styles.welcomeTitle, { color: isDarkMode ? '#fff' : '#0369a1' }]}>Navilux Assistant</Text>
+            <Text style={[styles.welcomeText, { color: isDarkMode ? '#94a3b8' : '#0c4a6e' }]}>
+              {item.text}
+            </Text>
+          </LinearGradient>
+        </View>
+      );
+    }
 
     return (
       <View style={[
@@ -237,14 +252,14 @@ Action Types:
         isSystem && styles.rowSystem
       ]}>
         {!isUser && !isSystem && (
-          <View style={[styles.botIcon, { backgroundColor: theme.primary || '#4A90E2' }]}>
-            <Ionicons name="sparkles" size={16} color="white" />
+          <View style={[styles.botIcon, { backgroundColor: '#0284c7' }]}>
+            <Ionicons name="hardware-chip-outline" size={16} color="white" />
           </View>
         )}
 
         {isUser ? (
           <LinearGradient
-            colors={[theme.primary || '#4A90E2', '#2563EB']}
+            colors={['#0284c7', '#0369a1']}
             style={[styles.bubble, styles.bubbleUser]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -254,7 +269,10 @@ Action Types:
         ) : (
           <View style={[
             styles.bubble,
-            isSystem ? styles.bubbleSystem : [styles.bubbleBot, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: isDarkMode ? 1 : 0 }]
+            isSystem ? styles.bubbleSystem : [
+              styles.bubbleBot, 
+              { backgroundColor: isDarkMode ? '#1e293b' : '#fff', borderColor: theme.border, borderWidth: 1 }
+            ]
           ]}>
             <Text style={[
               styles.text,
@@ -270,56 +288,74 @@ Action Types:
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      
+      {/* HEADER */}
+      <View style={[styles.header, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-down" size={26} color={theme.text} />
+        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Navilux Assistant</Text>
+          <View style={styles.onlineBadge} />
+        </View>
+        <View style={{ width: 40 }} />
+      </View>
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-
-        {/* HEADER */}
-        <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-down" size={28} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Navilux Assistant</Text>
-          <View style={{ width: 28 }} />
-        </View>
-
         {/* CHAT */}
         <FlatList
           data={messages}
           renderItem={renderItem}
           keyExtractor={item => item.id}
           inverted
-          contentContainerStyle={{ paddingVertical: 16 }}
+          contentContainerStyle={{ paddingVertical: 20, paddingHorizontal: 4 }}
+          showsVerticalScrollIndicator={false}
         />
 
+        {/* TYPING INDICATOR */}
         {isTyping && (
           <View style={styles.typingContainer}>
-            <ActivityIndicator size="small" color={theme.primary || "#4A90E2"} />
-            <Text style={[styles.typingText, { color: theme.subText }]}>Navilux is thinking...</Text>
+            <View style={[styles.typingBubble, { backgroundColor: isDarkMode ? '#1e293b' : '#fff', borderColor: theme.border }]}>
+              <ActivityIndicator size="small" color="#0284c7" />
+              <Text style={[styles.typingText, { color: theme.subText }]}>Navilux is thinking...</Text>
+            </View>
           </View>
         )}
 
         {/* INPUT */}
-        <View style={[styles.inputWrapper, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
-          <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9', borderColor: theme.border, borderWidth: isDarkMode ? 1 : 0 }]}>
+        <View style={[styles.inputWrapper, { backgroundColor: theme.background }]}>
+          <View style={[
+            styles.inputContainer, 
+            { 
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', 
+              borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+            }
+          ]}>
             <TextInput
               style={[styles.input, { color: theme.text }]}
               value={input}
               onChangeText={setInput}
-              placeholder="Ask Navilux..."
+              placeholder="Ask anything..."
               placeholderTextColor={theme.subText}
               returnKeyType="send"
               onSubmitEditing={handleSend}
+              multiline
             />
-
             <TouchableOpacity
-              style={[styles.sendBtn, (!input.trim() || isTyping) ? styles.sendBtnDisabled : { backgroundColor: theme.primary || '#4A90E2' }]}
+              style={[
+                styles.sendBtn, 
+                (!input.trim() || isTyping) ? styles.sendBtnDisabled : { backgroundColor: '#0284c7' }
+              ]}
               onPress={handleSend}
               disabled={!input.trim() || isTyping}
+              activeOpacity={0.7}
             >
-              <Ionicons name="arrow-up" size={18} color="white" />
+              <Ionicons name="arrow-up" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -335,70 +371,198 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 16,
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(150,150,150,0.1)',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  onlineBadge: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10b981',
+    marginLeft: 6,
+    marginTop: 2,
+  },
+
+  welcomeContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+    alignItems: 'center',
+  },
+  welcomeCard: {
+    width: '100%',
+    padding: 24,
+    borderRadius: 24,
+    alignItems: 'center',
     elevation: 4,
+    shadowColor: '#0284c7',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  welcomeIconWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  welcomeTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  welcomeText: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+
+  row: { flexDirection: 'row', marginHorizontal: 16, marginVertical: 6 },
+  rowUser: { justifyContent: 'flex-end' },
+  rowBot: { justifyContent: 'flex-start' },
+  rowSystem: { justifyContent: 'center' },
+
+  botIcon: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginRight: 10, 
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  
+  bubble: { 
+    maxWidth: '82%', 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    borderRadius: 22,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
   },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  bubbleUser: { 
+    borderBottomRightRadius: 6,
+  },
+  bubbleBot: { 
+    borderBottomLeftRadius: 6,
+  },
+  bubbleSystem: { 
+    backgroundColor: 'transparent', 
+    padding: 4,
+    shadowOpacity: 0,
+  },
 
-  row: { flexDirection: 'row', marginHorizontal: 16, marginVertical: 8 },
-  rowUser: { justifyContent: 'flex-end' },
-  rowBot: { justifyContent: 'flex-start' },
-  rowSystem: { justifyContent: 'center' },
-
-  botIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginRight: 10, marginTop: 4 },
-  
-  bubble: { maxWidth: '80%', padding: 14, borderRadius: 20 },
-  bubbleUser: { borderBottomRightRadius: 4 },
-  bubbleBot: { borderBottomLeftRadius: 4 },
-  bubbleSystem: { backgroundColor: 'transparent', padding: 4 },
-
-  text: { fontSize: 15, lineHeight: 22 },
+  text: { fontSize: 16, lineHeight: 24 },
   textUser: { color: '#fff' },
   textSystem: { color: '#888', fontStyle: 'italic', fontSize: 13 },
+
+  typingContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    alignItems: 'center',
+  },
+  typingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderBottomLeftRadius: 6,
+    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  typingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
   inputWrapper: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderTopWidth: 1,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 24,
-    paddingHorizontal: 6,
+    alignItems: 'flex-end',
+    borderRadius: 28,
+    borderWidth: 1,
+    paddingHorizontal: 8,
     paddingVertical: 6,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
   },
   input: {
     flex: 1,
-    paddingHorizontal: 15,
-    fontSize: 15,
-    maxHeight: 100,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+    fontSize: 16,
+    minHeight: 40,
+    maxHeight: 120,
   },
   sendBtn: {
-    padding: 10,
-    borderRadius: 20,
-    marginLeft: 10,
     width: 40,
     height: 40,
+    borderRadius: 20,
+    marginLeft: 8,
+    marginBottom: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
-  sendBtnDisabled: { backgroundColor: '#9ca3af' },
-
-  typingContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    alignItems: 'center',
-  },
-  typingText: {
-    marginLeft: 8,
-    fontSize: 13,
-    fontWeight: '500',
+  sendBtnDisabled: { 
+    backgroundColor: '#cbd5e1',
+    elevation: 0,
+    shadowOpacity: 0,
   },
 });

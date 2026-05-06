@@ -21,9 +21,11 @@ import {
   GEOAPIFY_API_KEY,
   GNEWS_API_KEY,
   GEMINI_API_KEY_FOR_REPORT as GEMINI_API_KEY,
+  PEXELS_API_KEY,
 } from '@env';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebaseConfig';
+import { logScreenView, logAnalyticsEvent } from '../utils/analytics';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +36,33 @@ const MODEL_PRIORITY = [
   'gemini-2.5-flash',
 ];
 const SCRIPT_URL = `https://script.google.com/macros/s/${DATA_API}/exec`;
+
+const fetchPexelsImage = async (placeName, cityName) => {
+  try {
+    if (!PEXELS_API_KEY) return null;
+    let res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(placeName + ' ' + cityName)}&per_page=1`, {
+      headers: { Authorization: PEXELS_API_KEY }
+    });
+    let data = await res.json();
+    if (!data.photos || data.photos.length === 0) {
+      res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(cityName + ' city landmark')}&per_page=15`, {
+        headers: { Authorization: PEXELS_API_KEY }
+      });
+      data = await res.json();
+    }
+    if (!data.photos || data.photos.length === 0) {
+      res = await fetch(`https://api.pexels.com/v1/search?query=beautiful travel destination&per_page=15`, {
+        headers: { Authorization: PEXELS_API_KEY }
+      });
+      data = await res.json();
+    }
+    if (data.photos && data.photos.length > 0) {
+      const randomPhoto = data.photos[Math.floor(Math.random() * data.photos.length)];
+      return randomPhoto.src.large;
+    }
+  } catch (error) { console.log("Pexels API Error:", error); }
+  return null;
+};
 
 export default function CityAnalysisScreen({ route, navigation }) {
   const { city } = route?.params || {};
@@ -50,6 +79,7 @@ export default function CityAnalysisScreen({ route, navigation }) {
   const [aiReport, setAiReport] = useState(null);
 
   useEffect(() => {
+    logScreenView('CityAnalysisScreen', 'CityAnalysisScreen');
     fetchAllData();
   }, [city]);
 
@@ -67,6 +97,9 @@ export default function CityAnalysisScreen({ route, navigation }) {
       setPreferences(userPrefs);
 
       const targetCity = city || 'Phagwara';
+
+      // Log city analysis event
+      logAnalyticsEvent('analyze_city', { city_name: targetCity });
 
       // 1. Weather
       const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${targetCity}&appid=${WEATHER_API_KEY}&units=metric`);
@@ -112,13 +145,18 @@ export default function CityAnalysisScreen({ route, navigation }) {
           const expRes = await fetch(`https://api.geoapify.com/v2/places?categories=tourism,leisure,natural&filter=circle:${lon},${lat},20000&limit=5&apiKey=${GEOAPIFY_API_KEY}`);
           const expJson = await expRes.json();
           if (expJson.features) {
-            const formatted = expJson.features.map((item, index) => ({
-              id: index.toString(),
-              title: item.properties.name || item.properties.address_line1 || 'Unknown Place',
-              distance: item.properties.distance ? (item.properties.distance / 1000).toFixed(1) + ' km' : 'Nearby',
-              image: `https://picsum.photos/400/300?random=${index + 10}`,
-              rating: (Math.random() * (5 - 4) + 4).toFixed(1),
-            }));
+            const formattedPromises = expJson.features.map(async (item, index) => {
+              const title = item.properties.name || item.properties.address_line1 || 'Unknown Place';
+              const pexelsImage = await fetchPexelsImage(title, targetCity);
+              return {
+                id: index.toString(),
+                title: title,
+                distance: item.properties.distance ? (item.properties.distance / 1000).toFixed(1) + ' km' : null,
+                image: pexelsImage || `https://picsum.photos/400/300?random=${index + 10}`,
+                rating: (Math.random() * (5 - 4) + 4).toFixed(1),
+              };
+            });
+            const formatted = await Promise.all(formattedPromises);
             setExplorePlaces(formatted);
           }
         }
@@ -358,7 +396,9 @@ Network Coverage: ${nData?.['Network Covrage'] || 'Unknown'}
                   <Image source={{ uri: place.image }} style={styles.exploreImage} />
                   <View style={styles.exploreContent}>
                     <Text style={[styles.exploreTitle, { color: theme.text }]} numberOfLines={1}>{place.title}</Text>
-                    <Text style={[styles.exploreSub, { color: theme.subText }]}>📍 {place.distance} • ⭐ {place.rating}</Text>
+                    <Text style={[styles.exploreSub, { color: theme.subText }]}>
+                      {place.distance ? `📍 ${place.distance} • ` : ''}⭐ {place.rating}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               ))}

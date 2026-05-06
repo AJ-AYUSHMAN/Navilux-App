@@ -139,7 +139,7 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
 
   const user = userProfile;
   // Provide random user avatar if user has no photo
-  const defaultAvatarUrl = `https://i.pravatar.cc/200?u=${user.email}`;
+  const defaultAvatarUrl = `https://api.dicebear.com/7.x/fun-emoji/png?seed=${user.email}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffdfbf,ffd5dc`;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>

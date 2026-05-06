@@ -1,5 +1,5 @@
 // src/screens/NewsScreen.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GNEWS_API_KEY } from '@env'; // 🔥 make sure to add GNEWS_API_KEY in .env
+import { ThemeContext } from '../context/ThemeContext';
 
 const API_KEY = GNEWS_API_KEY; // 🔥 replace
 
 export default function NewsScreen({ navigation }) {
+  const { theme, isDarkMode } = useContext(ThemeContext);
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +47,7 @@ export default function NewsScreen({ navigation }) {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: theme.card, shadowColor: isDarkMode ? '#000' : '#aaa' }]}
       activeOpacity={0.85}
       onPress={() => handlePress(item)}
     >
@@ -71,22 +73,22 @@ export default function NewsScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
 
       {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Latest News</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Latest News</Text>
 
-        <Ionicons name="newspaper-outline" size={22} color="#333" />
+        <Ionicons name="newspaper-outline" size={22} color={theme.text} />
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#7EC7FF" />
+        <ActivityIndicator size="large" color={theme.primary} />
       ) : (
         <FlatList
           data={news}

@@ -52,7 +52,7 @@ export default function ExploreDetailsScreen({ route, navigation }) {
 
           {/* Meta */}
           <View style={styles.metaRow}>
-            <Text style={[styles.meta, { color: theme.text }]}>📍 {place.distance}</Text>
+            {place.distance && <Text style={[styles.meta, { color: theme.text }]}>📍 {place.distance}</Text>}
             <Text style={[styles.meta, { color: theme.text }]}>⭐ {place.rating}</Text>
           </View>
 

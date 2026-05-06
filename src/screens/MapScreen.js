@@ -134,6 +134,18 @@ export default function MapScreen({ route, navigation }) {
         window.addEventListener("message", function(event) {
             document.dispatchEvent(new MessageEvent("message", { data: event.data }));
         });
+
+        // Send map clicks back to React Native to dismiss keyboards/suggestions
+        map.on('click', function() {
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_CLICKED' }));
+            }
+        });
+        map.on('dragstart', function() {
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_CLICKED' }));
+            }
+        });
       </script>
     </body>
     </html>
@@ -347,6 +359,16 @@ export default function MapScreen({ route, navigation }) {
                     }));
                 }
             }}
+            onMessage={(event) => {
+                try {
+                    const data = JSON.parse(event.nativeEvent.data);
+                    if (data.type === 'MAP_CLICKED') {
+                        Keyboard.dismiss();
+                        setSuggestions([]);
+                        setActiveInput('');
+                    }
+                } catch(e) {}
+            }}
           />
       </View>
 
@@ -362,7 +384,11 @@ export default function MapScreen({ route, navigation }) {
                     placeholder="Search destination"
                     value={searchText}
                     onChangeText={(t) => onTextChange(t, 'search')}
-                    onFocus={() => { setActiveInput('search'); setSuggestions([]); }}
+                    onFocus={() => { 
+                        setActiveInput('search'); 
+                        if (searchText.length > 2) fetchOlaPlaces(searchText); 
+                        else setSuggestions([]); 
+                    }}
                     placeholderTextColor={theme.subText}
                 />
             </View>
@@ -413,7 +439,11 @@ export default function MapScreen({ route, navigation }) {
                             <TextInput 
                                 style={[styles.navInput, { color: theme.text }]} value={originText}
                                 onChangeText={(t) => onTextChange(t, 'origin')}
-                                onFocus={() => { setActiveInput('origin'); setSuggestions([]); }}
+                                onFocus={() => { 
+                                    setActiveInput('origin'); 
+                                    if (originText.length > 2 && originText !== 'Your Location') fetchOlaPlaces(originText); 
+                                    else setSuggestions([]); 
+                                }}
                                 placeholder="Start location" placeholderTextColor={theme.subText}
                             />
                         </View>
@@ -423,7 +453,11 @@ export default function MapScreen({ route, navigation }) {
                             <TextInput 
                                 style={[styles.navInput, { color: theme.text }]} value={destText} 
                                 onChangeText={(t) => onTextChange(t, 'dest')}
-                                onFocus={() => { setActiveInput('dest'); setSuggestions([]); }}
+                                onFocus={() => { 
+                                    setActiveInput('dest'); 
+                                    if (destText.length > 2) fetchOlaPlaces(destText); 
+                                    else setSuggestions([]); 
+                                }}
                                 placeholder="Choose destination" placeholderTextColor={theme.subText} autoFocus={!destText}
                             />
                         </View>

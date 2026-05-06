@@ -30,6 +30,7 @@
     "scheme": "com.ajayushman.navilux",
     "plugins": [
       "expo-web-browser",
+      "@react-native-firebase/app",
       [
         "expo-notifications",
         {
