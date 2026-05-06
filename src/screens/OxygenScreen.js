@@ -1,29 +1,31 @@
 // src/screens/OxygenScreen.js
-import React from 'react';
+import React, { useContext } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { ThemeContext } from '../context/ThemeContext';
 
 export default function OxygenScreen({ route }) {
   const { oxygen, city } = route?.params || {};
+  const { isDarkMode, theme } = useContext(ThemeContext);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Oxygen level</Text>
-      <Text style={styles.city}>{city || 'Current location'}</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.title, { color: theme.text }]}>Oxygen level</Text>
+      <Text style={[styles.city, { color: theme.subText }]}>{city || 'Current location'}</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.value}>{oxygen || 'N/A'}</Text>
-        <Text style={styles.label}>Approximate O₃ / air component</Text>
-        <Text style={styles.desc}>
+      <View style={[styles.card, { backgroundColor: theme.card }]}>
+        <Text style={[styles.value, { color: theme.text }]}>{oxygen || 'N/A'}</Text>
+        <Text style={[styles.label, { color: theme.subText }]}>Approximate O₃ / air component</Text>
+        <Text style={[styles.desc, { color: theme.subText }]}>
           This value is derived from air pollution data. Higher values may
           correlate with smog or ozone peaks in your area.
         </Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tips</Text>
-        <Text style={styles.text}>• Avoid heavy outdoor exercise during high ozone hours.</Text>
-        <Text style={styles.text}>• Prefer early morning or evening walks.</Text>
-        <Text style={styles.text}>• Keep indoor plants and proper ventilation.</Text>
+      <View style={[styles.section, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Tips</Text>
+        <Text style={[styles.text, { color: theme.subText }]}>• Avoid heavy outdoor exercise during high ozone hours.</Text>
+        <Text style={[styles.text, { color: theme.subText }]}>• Prefer early morning or evening walks.</Text>
+        <Text style={[styles.text, { color: theme.subText }]}>• Keep indoor plants and proper ventilation.</Text>
       </View>
     </View>
   );

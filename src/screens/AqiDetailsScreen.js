@@ -1,10 +1,12 @@
 // src/screens/AqiDetailsScreen.js
-import React from 'react';
+import React, { useContext } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ThemeContext } from '../context/ThemeContext';
 
 export default function AqiDetailsScreen({ route }) {
   const { aqi, city, components } = route?.params || {};
+  const { isDarkMode, theme } = useContext(ThemeContext);
   const label = () => {
     if (!aqi) return 'Unknown';
     if (aqi === 1) return 'Good';
@@ -26,20 +28,20 @@ export default function AqiDetailsScreen({ route }) {
 
   const renderRow = (name, value, unit = 'µg/m³') => (
     <View style={styles.row} key={name}>
-      <Text style={styles.rowLabel}>{name}</Text>
-      <Text style={styles.rowValue}>
+      <Text style={[styles.rowLabel, { color: theme.subText }]}>{name}</Text>
+      <Text style={[styles.rowValue, { color: theme.text }]}>
         {value != null ? `${value} ${unit}` : '—'}
       </Text>
     </View>
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.city}>{city || 'Current location'}</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={{ padding: 16 }}>
+      <Text style={[styles.city, { color: theme.text }]}>{city || 'Current location'}</Text>
 
-      <View style={styles.aqiCard}>
-        <Text style={styles.aqiLabel}>Air Quality Index</Text>
-        <Text style={styles.aqiValue}>{aqi || '--'}</Text>
+      <View style={[styles.aqiCard, { backgroundColor: theme.card }]}>
+        <Text style={[styles.aqiLabel, { color: theme.subText }]}>Air Quality Index</Text>
+        <Text style={[styles.aqiValue, { color: theme.text }]}>{aqi || '--'}</Text>
         <Text style={styles.aqiStatus}>{label()}</Text>
 
         <View style={styles.aqiScale}>
@@ -55,14 +57,14 @@ export default function AqiDetailsScreen({ route }) {
           ))}
         </View>
 
-        <Text style={styles.aqiDesc}>
+        <Text style={[styles.aqiDesc, { color: theme.subText }]}>
           Lower is better. Values above 3 indicate unhealthy air for
           sensitive groups.
         </Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Pollutants</Text>
+      <View style={[styles.section, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Pollutants</Text>
         {renderRow('PM2.5 (fine particles)', polls.pm2_5)}
         {renderRow('PM10 (coarse particles)', polls.pm10)}
         {renderRow('Ozone (O₃)', polls.o3)}
@@ -71,23 +73,23 @@ export default function AqiDetailsScreen({ route }) {
         {renderRow('Carbon monoxide (CO)', polls.co)}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Health recommendations</Text>
+      <View style={[styles.section, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Health recommendations</Text>
         <View style={styles.bulletRow}>
           <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-          <Text style={styles.bulletText}>
+          <Text style={[styles.bulletText, { color: theme.subText }]}>
             Sensitive people should reduce outdoor activities when AQI &gt; 3.
           </Text>
         </View>
         <View style={styles.bulletRow}>
           <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-          <Text style={styles.bulletText}>
+          <Text style={[styles.bulletText, { color: theme.subText }]}>
             Wear a suitable mask when pollution is high.
           </Text>
         </View>
         <View style={styles.bulletRow}>
           <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-          <Text style={styles.bulletText}>
+          <Text style={[styles.bulletText, { color: theme.subText }]}>
             Keep windows closed near high-traffic roads.
           </Text>
         </View>

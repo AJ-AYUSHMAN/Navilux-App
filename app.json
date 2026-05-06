@@ -21,13 +21,23 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.ajayushman.navilux"
+      "package": "com.ajayushman.navilux",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "scheme": "com.ajayushman.navilux",
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#7EC7FF",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "extra": {
       "eas": {

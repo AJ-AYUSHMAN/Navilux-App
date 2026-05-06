@@ -9,9 +9,12 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ThemeContext } from '../context/ThemeContext';
+import { useContext } from 'react';
 
 export default function ExploreDetailsScreen({ route, navigation }) {
   const { place, city } = route.params || {};
+  const { isDarkMode, theme } = useContext(ThemeContext);
 
   if (!place) {
     return (
@@ -28,11 +31,11 @@ export default function ExploreDetailsScreen({ route, navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
 
       {/* Back */}
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Ionicons name="chevron-back" size={24} color="#000" />
+      <TouchableOpacity style={[styles.backBtn, { backgroundColor: theme.card }]} onPress={() => navigation.goBack()}>
+        <Ionicons name="chevron-back" size={24} color={theme.text} />
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -43,25 +46,25 @@ export default function ExploreDetailsScreen({ route, navigation }) {
         {/* Content */}
         <View style={styles.content}>
 
-          <Text style={styles.title}>{place.title}</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{place.title}</Text>
 
-          <Text style={styles.subtitle}>{place.subtitle}</Text>
+          <Text style={[styles.subtitle, { color: theme.subText }]}>{place.subtitle}</Text>
 
           {/* Meta */}
           <View style={styles.metaRow}>
-            <Text style={styles.meta}>📍 {place.distance}</Text>
-            <Text style={styles.meta}>⭐ {place.rating}</Text>
+            <Text style={[styles.meta, { color: theme.text }]}>📍 {place.distance}</Text>
+            <Text style={[styles.meta, { color: theme.text }]}>⭐ {place.rating}</Text>
           </View>
 
           {/* Description */}
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.description}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>About</Text>
+          <Text style={[styles.description, { color: theme.subText }]}>
             This is a beautiful place located in {city}. It is a great destination
             for travelers who enjoy exploring nature, culture, and local experiences.
           </Text>
 
           {/* Button */}
-          <TouchableOpacity style={styles.button} onPress={openMaps}>
+          <TouchableOpacity style={[styles.button, { backgroundColor: theme.primary }]} onPress={openMaps}>
             <Text style={styles.buttonText}>Open in Google Maps</Text>
           </TouchableOpacity>
 

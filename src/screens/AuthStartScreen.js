@@ -6,6 +6,7 @@ import {
   Image,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function AuthStartScreen({ navigation }) {
   return (
@@ -21,27 +22,14 @@ export default function AuthStartScreen({ navigation }) {
         style={[styles.button, styles.emailButton]}
         onPress={() => navigation.navigate('Login')}
       >
+        <Ionicons name="mail-outline" size={20} color="#888" style={{ marginRight: 8 }} />
         <Text style={styles.buttonText}>Continue with Email</Text>
-      </TouchableOpacity>
-
-      {/* Google Auth - will integrate later */}
-      <TouchableOpacity
-        style={[styles.button, styles.googleButton]}
-        onPress={() => console.log('Google Auth Here')}
-      >
-        <Image
-          source={require('../../assets/google.png')}
-          style={styles.googleIcon}
-        />
-        <Text style={[styles.buttonText, { color: '#444' }]}>
-          Continue with Google
-        </Text>
       </TouchableOpacity>
 
       <Text style={styles.terms}>
         By continuing, you agree to our{' '}
-        <Text style={styles.link}>Terms of Use</Text> and{' '}
-        <Text style={styles.link}>Privacy Policy</Text>.
+        <Text style={styles.link} onPress={() => navigation.navigate('TermsOfUse')}>Terms of Use</Text> and{' '}
+        <Text style={styles.link} onPress={() => navigation.navigate('PrivacyPolicy')}>Privacy Policy</Text>.
       </Text>
     </View>
   );
@@ -71,16 +59,8 @@ const styles = StyleSheet.create({
   },
   emailButton: {
     backgroundColor: '#FFFFFF',
-  },
-  googleButton: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#DDD',
-  },
-  googleIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 8,
   },
   buttonText: {
     color: '#888',

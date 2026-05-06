@@ -1,80 +1,185 @@
 // src/screens/NetworkScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState, useContext } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { DATA_API } from '@env';
+import { ThemeContext } from '../context/ThemeContext';
+
+const API_BASE = `https://script.google.com/macros/s/${DATA_API}/exec`;
 
 export default function NetworkScreen({ route }) {
   const { city } = route?.params || {};
+  const { isDarkMode, theme } = useContext(ThemeContext);
+
+  const [networkData, setNetworkData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchNetworkData();
+  }, [city]);
+
+  const fetchNetworkData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(API_BASE);
+      const json = await res.json();
+
+      // Find the matching city entry (case-insensitive)
+      const searchCity = (city || '').trim().toLowerCase();
+      const match = json.find(
+        (item) => item.City && item.City.trim().toLowerCase() === searchCity
+      );
+
+      if (match) {
+        setNetworkData(match);
+      } else {
+        setNetworkData(null);
+        setError('No network data available for this city.');
+      }
+    } catch (e) {
+      console.log('Network API Error:', e);
+      setError('Failed to fetch network data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Derive a signal strength from network coverage provider name (visual only)
+  const getSignalBars = () => {
+    if (!networkData) return 0;
+    // Default to 3 bars for any known provider
+    return 3;
+  };
+
+  const provider = networkData?.['Network Covrage'] || networkData?.['Network Coverage'] || '--';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.title}>Network coverage</Text>
-      <Text style={styles.city}>{city || 'Your area'} • Jio</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={{ padding: 16 }}
+    >
+      <Text style={[styles.title, { color: theme.text }]}>Network Coverage</Text>
+      <Text style={[styles.city, { color: theme.subText }]}>
+        {city || 'Your area'} {networkData ? `• ${provider}` : ''}
+      </Text>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Signal strength</Text>
-        <View style={styles.bars}>
-          {[1, 2, 3, 4].map((v) => (
-            <View key={v} style={[styles.bar, v <= 3 && styles.barActive]} />
-          ))}
+      {loading && (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loaderText, { color: theme.subText }]}>
+            Fetching network data…
+          </Text>
         </View>
-        <Text style={styles.smallText}>Good 5G support</Text>
-      </View>
+      )}
 
-      {/* <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Speed (placeholder)</Text>
-        <Text style={styles.text}>Download: 45 Mbps</Text>
-        <Text style={styles.text}>Upload: 15 Mbps</Text>
-        <Text style={styles.text}>Latency: 24 ms</Text>
-      </View> */}
+      {!loading && error && (
+        <View style={[styles.card, { backgroundColor: theme.card }]}>
+          <View style={styles.errorRow}>
+            <Ionicons name="alert-circle-outline" size={22} color={theme.danger} />
+            <Text style={[styles.errorText, { color: theme.danger }]}>{error}</Text>
+          </View>
+        </View>
+      )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tips</Text>
-        <Row icon="cellular-outline" label="Move closer to open areas for better signal." />
-        <Row icon="wifi-outline" label="Use Wi-Fi calling when indoor signal is weak." />
-        <Row icon="settings-outline" label="Switch to automatic network selection." />
+      {!loading && networkData && (
+        <>
+          {/* Provider & signal card */}
+          <View style={[styles.card, { backgroundColor: theme.card }]}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>Primary Provider</Text>
+            <View style={styles.providerRow}>
+              <View style={[styles.providerBadge, { backgroundColor: isDarkMode ? '#1e3a5f' : '#E3F2FD' }]}>
+                <Ionicons name="cellular" size={22} color="#4CAF50" />
+              </View>
+              <View style={{ marginLeft: 12 }}>
+                <Text style={[styles.providerName, { color: theme.text }]}>{provider}</Text>
+                <Text style={[styles.smallText, { color: theme.subText }]}>
+                  More Than Average Coverage in {city || 'this area'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Signal strength card */}
+          <View style={[styles.card, { backgroundColor: theme.card }]}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>Signal Strength</Text>
+            <View style={styles.bars}>
+              {[1, 2, 3, 4].map((v) => (
+                <View
+                  key={v}
+                  style={[
+                    styles.bar,
+                    { height: 8 + v * 6, backgroundColor: isDarkMode ? '#333' : '#DDD' },
+                    v <= getSignalBars() && styles.barActive,
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={[styles.smallText, { color: theme.subText }]}>
+              {getSignalBars() >= 3 ? 'Good coverage expected' : 'Limited coverage expected'}
+            </Text>
+          </View>
+        </>
+      )}
+
+      {/* Tips section — always visible */}
+      <View style={[styles.section, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Tips</Text>
+        <Row icon="cellular-outline" label="Move closer to open areas for better signal." theme={theme} />
+        <Row icon="wifi-outline" label="Use Wi-Fi calling when indoor signal is weak." theme={theme} />
+        <Row icon="settings-outline" label="Switch to automatic network selection." theme={theme} />
+        <Row icon="download-outline" label="Download offline maps before you travel." theme={theme} />
       </View>
     </ScrollView>
   );
 }
 
-function Row({ icon, label }) {
+function Row({ icon, label, theme }) {
   return (
     <View style={styles.row}>
-      <Ionicons name={icon} size={18} color="#2196F3" />
-      <Text style={styles.rowText}>{label}</Text>
+      <Ionicons name={icon} size={18} color={theme.primary} />
+      <Text style={[styles.rowText, { color: theme.subText }]}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EDEDED' },
-  title: { fontSize: 20, fontWeight: '700', marginTop: 30, color: '#333' },
-  city: { fontSize: 13, color: '#777', marginBottom: 10 },
+  container: { flex: 1 },
+  title: { fontSize: 20, fontWeight: '700', marginTop: 30 },
+  city: { fontSize: 13, marginBottom: 10 },
+  loaderContainer: { alignItems: 'center', marginTop: 40 },
+  loaderText: { marginTop: 10, fontSize: 13 },
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
     marginBottom: 14,
   },
-  cardTitle: { fontSize: 15, fontWeight: '600', marginBottom: 6 },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', height: 26, marginBottom: 6 },
-  bar: {
-    width: 6,
-    marginRight: 4,
-    borderRadius: 3,
-    backgroundColor: '#DDD',
+  cardTitle: { fontSize: 15, fontWeight: '600', marginBottom: 8 },
+  providerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  providerBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  barActive: { backgroundColor: '#4CAF50', height: '100%' },
-  smallText: { fontSize: 12, color: '#777' },
+  providerName: { fontSize: 18, fontWeight: '700' },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', height: 36, marginBottom: 8, gap: 6 },
+  bar: {
+    width: 10,
+    borderRadius: 4,
+  },
+  barActive: { backgroundColor: '#4CAF50' },
+  smallText: { fontSize: 12 },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  errorText: { fontSize: 13, flex: 1 },
   section: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
     marginBottom: 14,
   },
   sectionTitle: { fontSize: 15, fontWeight: '600', marginBottom: 8 },
-  text: { fontSize: 13, color: '#555', marginBottom: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', marginVertical: 4 },
-  rowText: { marginLeft: 8, fontSize: 13, color: '#555' },
+  row: { flexDirection: 'row', alignItems: 'center', marginVertical: 6 },
+  rowText: { marginLeft: 10, fontSize: 13, flex: 1 },
 });

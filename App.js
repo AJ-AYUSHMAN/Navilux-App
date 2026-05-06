@@ -1,16 +1,26 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   NavigationContainer,
   useNavigationContainerRef,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
+import { ThemeProvider } from './src/context/ThemeContext';
+import { auth } from './src/config/firebaseConfig';
+import { onAuthStateChanged } from 'firebase/auth';
+import * as Notifications from 'expo-notifications';
+import {
+  registerForPushNotificationsAsync,
+  scheduleWelcomeNotification,
+  scheduleDailyTravelTip,
+} from './src/services/notificationService';
 /* Screens */
 import SplashScreen from './src/screens/SplashScreen';
 import AuthStartScreen from './src/screens/AuthStartScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import TermsOfUseScreen from './src/screens/TermsOfUseScreen';
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 
 import HomeScreen from './src/screens/HomeScreen';
 import MapScreen from './src/screens/MapScreen';
@@ -28,7 +38,10 @@ import AqiDetailsScreen from './src/screens/AqiDetailsScreen';
 import OxygenScreen from './src/screens/OxygenScreen';
 import CrimeScreen from './src/screens/CrimeScreen';
 import NetworkScreen from './src/screens/NetworkScreen';
+import TrainScreen from './src/screens/TrainScreen';
+import OlaScreen from './src/screens/OlaScreen';
 import CitySearchResultsScreen from './src/screens/CitySearchResultsScreen';
+import CityAnalysisScreen from './src/screens/CityAnalysisScreen';
 
 import SettingsScreen from './src/screens/SettingsScreen';
 import AboutScreen from './src/screens/AboutScreen';
@@ -48,8 +61,68 @@ export default function App() {
 
   const [currentRouteName, setCurrentRouteName] = useState('Splash');
 
-  // 🔥 Auth state (change this later using AsyncStorage)
+  // 🔥 Auth state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [expoPushToken, setExpoPushToken] = useState('');
+  const notificationListener = useRef();
+  const responseListener = useRef();
+
+  // 🔄 Listen for Firebase Auth State Changes to persist login
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // 🔔 Register for push notifications & set up listeners
+  useEffect(() => {
+    registerForPushNotificationsAsync().then((token) => {
+      if (token) setExpoPushToken(token);
+    });
+
+    // Listener: notification received while app is in the foreground
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener((notification) => {
+        console.log('🔔 Notification received:', notification);
+      });
+
+    // Listener: user tapped on a notification
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data;
+        console.log('🔔 Notification tapped, data:', data);
+
+        // Navigate to a screen if the notification payload includes a screen name
+        if (data?.screen && navigationRef.isReady()) {
+          navigationRef.navigate(data.screen, data.params || {});
+        }
+      });
+
+    return () => {
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+    };
+  }, []);
+
+  // 🎉 Welcome notification (first login only) + 📅 Daily travel tip
+  useEffect(() => {
+    if (isLoggedIn) {
+      // One-time welcome notification — only fires on the very first login
+      scheduleWelcomeNotification();
+      // Schedule daily travel tip at 9:00 AM
+      scheduleDailyTravelTip();
+    }
+  }, [isLoggedIn]);
 
   // 🚫 Routes where chat button should NOT appear
   const hideChatRoutes = [
@@ -62,7 +135,8 @@ export default function App() {
   ];
 
   return (
-    <NavigationContainer
+    <ThemeProvider>
+      <NavigationContainer
       ref={navigationRef}
       onReady={() => {
         const initialName =
@@ -114,6 +188,8 @@ export default function App() {
                 name="ForgotPassword"
                 component={ForgotPasswordScreen}
               />
+              <Stack.Screen name="TermsOfUse" component={TermsOfUseScreen} />
+              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             </>
           ) : (
             /* 🏠 MAIN APP */
@@ -161,6 +237,9 @@ export default function App() {
               <Stack.Screen name="Oxygen" component={OxygenScreen} />
               <Stack.Screen name="Crime" component={CrimeScreen} />
               <Stack.Screen name="Network" component={NetworkScreen} />
+              <Stack.Screen name="Train" component={TrainScreen} />
+              <Stack.Screen name="Ola" component={OlaScreen} />
+              <Stack.Screen name="CityAnalysis" component={CityAnalysisScreen} />
 
               {/* Search */}
               <Stack.Screen
@@ -179,6 +258,7 @@ export default function App() {
           <FloatingChatButton />
         )}
       </>
-    </NavigationContainer>
+      </NavigationContainer>
+    </ThemeProvider>
   );
 }

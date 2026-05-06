@@ -11,9 +11,12 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ThemeContext } from '../context/ThemeContext';
+import { useContext } from 'react';
 
 export default function NewsDetailsScreen({ route, navigation }) {
   const { article } = route.params || {};
+  const { isDarkMode, theme } = useContext(ThemeContext);
 
   if (!article) {
     return (
@@ -30,16 +33,16 @@ export default function NewsDetailsScreen({ route, navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
 
       {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </TouchableOpacity>
 
-        <Text style={styles.topTitle}>News</Text>
+        <Text style={[styles.topTitle, { color: theme.text }]}>News</Text>
 
         <View style={{ width: 24 }} />
       </View>
@@ -60,26 +63,26 @@ export default function NewsDetailsScreen({ route, navigation }) {
         <View style={styles.content}>
           
           {/* Title */}
-          <Text style={styles.title}>{article.title}</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{article.title}</Text>
 
           {/* Source + Date */}
-          <Text style={styles.meta}>
+          <Text style={[styles.meta, { color: theme.subText }]}>
             {article.source?.name} •{' '}
             {new Date(article.publishedAt).toDateString()}
           </Text>
 
           {/* Description */}
-          <Text style={styles.description}>
+          <Text style={[styles.description, { color: theme.text }]}>
             {article.description || 'No description available.'}
           </Text>
 
           {/* Content */}
-          <Text style={styles.fullText}>
+          <Text style={[styles.fullText, { color: theme.subText }]}>
             {article.content || 'Full content not available.'}
           </Text>
 
           {/* Button */}
-          <TouchableOpacity style={styles.button} onPress={openArticle}>
+          <TouchableOpacity style={[styles.button, { backgroundColor: theme.primary }]} onPress={openArticle}>
             <Text style={styles.buttonText}>Read Full Article</Text>
           </TouchableOpacity>
 

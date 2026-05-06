@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GEOAPIFY_API_KEY as GEO_API_KEY } from '@env';
 
 export default function ExploreScreen({ route, navigation }) {
-  const city = route?.params?.city || 'Jaipur';
+  const city = route?.params?.city || 'Phagwara';
 
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,8 @@
 // src/screens/FaqScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useContext } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { ThemeContext } from '../context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 
 const FAQ = [
   {
@@ -17,34 +19,52 @@ const FAQ = [
   },
 ];
 
-export default function FaqScreen() {
+export default function FaqScreen({ navigation }) {
+  const { theme, isDarkMode } = useContext(ThemeContext);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.title}>FAQ & Support</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+           <Ionicons name="chevron-back" size={28} color={theme.text} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: theme.text }]}>FAQ & Support</Text>
+      </View>
+      
       {FAQ.map((item, idx) => (
-        <View key={idx} style={styles.card}>
-          <Text style={styles.q}>{item.q}</Text>
-          <Text style={styles.a}>{item.a}</Text>
+        <View key={idx} style={[styles.card, { backgroundColor: theme.card, shadowColor: isDarkMode ? '#FFF' : '#000', borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]}>
+          <Text style={[styles.q, { color: theme.text }]}>{item.q}</Text>
+          <Text style={[styles.a, { color: theme.subText }]}>{item.a}</Text>
         </View>
       ))}
 
-      <Text style={styles.text}>
-        For more help, you can add a contact form or support email here.
+      <Text style={[styles.text, { color: theme.subText }]}>
+        For more help, you can contact us at support@navilux.com
       </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EDEDED' },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 10, marginTop: 30, color: '#333' },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 10,
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
   },
-  q: { fontSize: 14, fontWeight: '600', marginBottom: 4, color: '#444' },
-  a: { fontSize: 13, color: '#555' },
-  text: { fontSize: 12, color: '#777', marginTop: 10 },
+  backBtn: { marginRight: 8, marginLeft: -4 },
+  title: { fontSize: 24, fontWeight: '800' },
+  card: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  q: { fontSize: 16, fontWeight: '700', marginBottom: 6 },
+  a: { fontSize: 14, lineHeight: 20 },
+  text: { fontSize: 13, marginTop: 20, textAlign: 'center', fontStyle: 'italic' },
 });

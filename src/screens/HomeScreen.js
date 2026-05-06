@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -12,17 +12,30 @@ import {
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import {WEATHER_API_KEY as OPENWEATHER_API_KEY} from '@env';
+import { ThemeContext } from '../context/ThemeContext';
+
 
 export default function HomeScreen({ navigation }) {
+  const { isDarkMode, theme } = useContext(ThemeContext);
   const [city, setCity] = useState('');
   const [displayCity, setDisplayCity] = useState('');
   const [weather, setWeather] = useState(null);
   const [aqi, setAqi] = useState(null);
-  const [oxygen, setOxygen] = useState(null); // derived / placeholder
+  const [oxygen, setOxygen] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [coords, setCoords] = useState(null);
+  const [randomImageId, setRandomImageId] = useState(Date.now());
+  const [imageError, setImageError] = useState(false);
 
-  // Get location & initial data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRandomImageId(Date.now());
+      setImageError(false); // Reset error state to try fetching the new image
+    }, 30000); // 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -36,13 +49,9 @@ export default function HomeScreen({ navigation }) {
 
         const loc = await Location.getCurrentPositionAsync({});
         const { latitude, longitude } = loc.coords;
+        setCoords({ latitude, longitude });
 
-        // reverse geocode to get city name
-        const geo = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
-
+        const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
         const detectedCity = geo[0]?.city || geo[0]?.region || 'Unknown Location';
         setCity(detectedCity);
         setDisplayCity(detectedCity);
@@ -61,24 +70,16 @@ export default function HomeScreen({ navigation }) {
     try {
       setLoading(true);
       setError(null);
-
-      // Weather by city
       const weatherRes = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
-          cityName
-        )}&appid=${OPENWEATHER_API_KEY}&units=metric`
+        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&appid=${OPENWEATHER_API_KEY}&units=metric`
       );
       const weatherJson = await weatherRes.json();
-      if (weatherJson.cod !== 200) {
-        throw new Error(weatherJson.message || 'City not found');
-      }
-
+      if (weatherJson.cod !== 200) throw new Error(weatherJson.message || 'City not found');
+      
       setWeather(weatherJson);
       setDisplayCity(weatherJson.name);
-
-      // Then AQI using coordinates from weather
-      const { lat, lon } = weatherJson.coord;
-      await fetchAqi(lat, lon);
+      setCoords({ latitude: weatherJson.coord.lat, longitude: weatherJson.coord.lon });
+      await fetchAqi(weatherJson.coord.lat, weatherJson.coord.lon);
     } catch (e) {
       console.log(e);
       setError(e.message);
@@ -91,15 +92,13 @@ export default function HomeScreen({ navigation }) {
     try {
       setLoading(true);
       setError(null);
-
-      // Weather by coords
       const weatherRes = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric`
       );
       const weatherJson = await weatherRes.json();
       setWeather(weatherJson);
       setDisplayCity(cityName || weatherJson.name);
-
+      setCoords({ latitude: lat, longitude: lon });
       await fetchAqi(lat, lon);
     } catch (e) {
       console.log(e);
@@ -117,8 +116,6 @@ export default function HomeScreen({ navigation }) {
       const aqiJson = await aqiRes.json();
       const aqiValue = aqiJson?.list?.[0]?.main?.aqi || null;
       setAqi(aqiValue);
-
-      // OpenWeather air pollution gives components like O3; we’ll treat it as “oxygen level” placeholder
       const o3 = aqiJson?.list?.[0]?.components?.o3;
       setOxygen(o3 ? `${o3.toFixed(0)} μg/m³` : null);
     } catch (e) {
@@ -147,28 +144,19 @@ export default function HomeScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Image
-          source={require('../../assets/splash-logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <TouchableOpacity
-          style={styles.profileIcon}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Ionicons name="person-circle-outline" size={28} color="#555" />
+        <Image source={require('../../assets/splash-logo.png')} style={styles.logo} resizeMode="contain" />
+        <TouchableOpacity style={styles.profileIcon} onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person-circle-outline" size={28} color={theme.text} />
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: theme.text }]}
           placeholder="Search your dream destination"
-          placeholderTextColor="#B0B0B0"
+          placeholderTextColor={theme.subText}
           value={city}
           onChangeText={setCity}
           returnKeyType="search"
@@ -180,87 +168,111 @@ export default function HomeScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Location & weather block */}
         <TouchableOpacity
-          style={styles.locationCard}
+          style={[styles.locationCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]}
           activeOpacity={0.8}
           onPress={() => navigation.navigate('Map', { city: displayCity })}
         >
           <View style={styles.locationLeft}>
-            <Text style={styles.locationLabel}>Your location</Text>
-            <Text style={styles.locationCity}>{displayCity || '—'}</Text>
-            {/* small placeholder map preview */}
-            <View style={styles.mapPreview}>
-              <Text style={styles.mapText}>Map preview</Text>
+            <Text style={[styles.locationLabel, { color: theme.subText }]}>Your location</Text>
+            <Text style={[styles.locationCity, { color: theme.text }]} numberOfLines={1}>{displayCity || '—'}</Text>
+            <View style={[styles.mapPreview, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: isDarkMode ? 1 : 0 }]}>
+              <Image source={isDarkMode ? require('../../assets/maps_preview_dark.png') : require('../../assets/maps_preview.png')} style={StyleSheet.absoluteFillObject} />
+              <View style={[styles.glassOverlay, { backgroundColor: isDarkMode ? 'rgba(30,30,30,0.35)' : 'rgba(255,255,255,0.35)' }]} />
+              <View style={styles.mapPreviewContent}>
+                <Ionicons name="map" size={24} color={isDarkMode ? '#FFF' : '#333'} />
+                <Text style={[styles.mapText, { color: isDarkMode ? '#FFF' : '#333' }]}>Map View</Text>
+              </View>
             </View>
           </View>
-
           <TouchableOpacity
-            style={styles.weatherCard}
+            style={[styles.weatherCard, { backgroundColor: isDarkMode ? '#1e293b' : '#E8F4FD' }]}
             activeOpacity={0.8}
             onPress={() => navigation.navigate('Weather', { weather, aqi })}
           >
-            <Text style={styles.weatherTemp}>{tempDisplay}</Text>
-            <Text style={styles.weatherDesc}>
-              {weather?.weather?.[0]?.main || 'Weather'}
-            </Text>
+            {weather?.weather?.[0]?.icon ? (
+              <Image source={{ uri: `https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png` }} style={styles.weatherIcon} />
+            ) : (
+              <Ionicons name="partly-sunny" size={40} color="#7EC7FF" style={{ marginBottom: 4 }} />
+            )}
+            <Text style={[styles.weatherTemp, { color: theme.text }]}>{tempDisplay}</Text>
+            <Text style={[styles.weatherDesc, { color: theme.subText }]} numberOfLines={1}>{weather?.weather?.[0]?.main || 'Weather'}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
 
-        {/* Metrics row */}
-        <View style={styles.metricsRow}>
-          <TouchableOpacity
-            style={styles.metricCard}
-            onPress={() => navigation.navigate('AqiDetails', { aqi })}
-          >
-            <Text style={styles.metricLabel}>AQI</Text>
-            <Text style={styles.metricValue}>{aqiLabel()}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.metricsRow}>
+          <TouchableOpacity style={[styles.metricCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.7} onPress={() => navigation.navigate('AqiDetails', { aqi })}>
+            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#172554' : '#E3F2FD' }]}>
+              <Ionicons name="leaf" size={20} color="#7EC7FF" />
+            </View>
+            <Text style={[styles.metricLabel, { color: theme.subText }]}>AQI</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{aqiLabel()}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.metricCard}
-            onPress={() => navigation.navigate('Network')}
-          >
-            <Text style={styles.metricLabel}>Network</Text>
-            <Text style={styles.metricValue}>Info</Text>
+          <TouchableOpacity style={[styles.metricCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.7} onPress={() => navigation.navigate('CityAnalysis', { city: displayCity })}>
+            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#4c1d95' : '#EDE9FE' }]}>
+              <Ionicons name="analytics" size={20} color="#8B5CF6" />
+            </View>
+            <Text style={[styles.metricLabel, { color: theme.subText }]}>Analysis</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>City Report</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.metricCard}
-            onPress={() => navigation.navigate('Oxygen', { oxygen })}
-          >
-            <Text style={styles.metricLabel}>Oxygen Lvl.</Text>
-            <Text style={styles.metricValue}>{oxygen || 'N/A'}</Text>
+          <TouchableOpacity style={[styles.metricCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.7} onPress={() => navigation.navigate('Network', { city: displayCity })}>
+            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#3b0764' : '#F3E5F5' }]}>
+              <Ionicons name="cellular" size={20} color="#BA68C8" />
+            </View>
+            <Text style={[styles.metricLabel, { color: theme.subText }]}>Network</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>Info</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.metricCard}
-            onPress={() => navigation.navigate('Crime')}
-          >
-            <Text style={styles.metricLabel}>Crime Rate</Text>
-            <Text style={styles.metricValue}>Data</Text>
+          <TouchableOpacity style={[styles.metricCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.7} onPress={() => navigation.navigate('Oxygen', { oxygen })}>
+            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#164e63' : '#E0F7FA' }]}>
+              <Ionicons name="water" size={20} color="#4DD0E1" />
+            </View>
+            <Text style={[styles.metricLabel, { color: theme.subText }]}>Oxygen</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{oxygen || 'N/A'}</Text>
           </TouchableOpacity>
-        </View>
 
-        {/* News card */}
-        <TouchableOpacity
-          style={styles.newsCard}
-          onPress={() => navigation.navigate('News', { city: displayCity })}
-        >
+          <TouchableOpacity style={[styles.metricCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.7} onPress={() => navigation.navigate('Crime', { city: displayCity })}>
+            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#7f1d1d' : '#FFEBEE' }]}>
+              <Ionicons name="shield-checkmark" size={20} color="#E57373" />
+            </View>
+            <Text style={[styles.metricLabel, { color: theme.subText }]}>Crime</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>Data</Text>
+          </TouchableOpacity>
+
+          
+
+          <TouchableOpacity style={[styles.metricCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.7} onPress={() => navigation.navigate('Train')}>
+            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#422006' : '#FFF3E0' }]}>
+              <Ionicons name="train" size={20} color="#FF9800" />
+            </View>
+            <Text style={[styles.metricLabel, { color: theme.subText }]}>Train</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>Status</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.metricCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.7} onPress={() => navigation.navigate('Ola')}>
+            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#064e3b' : '#D1FAE5' }]}>
+              <Ionicons name="car" size={20} color="#10B981" />
+            </View>
+            <Text style={[styles.metricLabel, { color: theme.subText }]}>Ola</Text>
+            <Text style={[styles.metricValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>Book Cab</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <TouchableOpacity style={[styles.newsCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.8} onPress={() => navigation.navigate('News', { city: displayCity })}>
           <View style={styles.newsContent}>
-            <Text style={styles.newsTitle}>What’s happening in your area?</Text>
-            <Text style={styles.newsSubtitle}>Tap to view local news</Text>
+            <Text style={[styles.newsTitle, { color: theme.text }]}>What’s happening in your area?</Text>
+            <Text style={[styles.newsSubtitle, { color: theme.subText }]}>Tap to view local news</Text>
           </View>
+          <Ionicons name="newspaper-outline" size={32} color="#7EC7FF" />
         </TouchableOpacity>
 
-        {/* Explore card */}
-        <TouchableOpacity
-          style={styles.exploreCard}
-          onPress={() => navigation.navigate('Explore', { city: displayCity })}
-        >
-          <Image
-            source={require('../../assets/explore-placeholder.jpg')}
-            style={styles.exploreImage}
+        <TouchableOpacity style={[styles.exploreCard, { borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.8} onPress={() => navigation.navigate('Explore', { city: displayCity })}>
+          <Image 
+            source={imageError ? require('../../assets/explore-placeholder.jpg') : { uri: `https://picsum.photos/400/300?random=${randomImageId}` }} 
+            style={styles.exploreImage} 
+            onError={() => setImageError(true)}
           />
           <View style={styles.exploreOverlay} />
           <View style={styles.exploreTextWrapper}>
@@ -270,184 +282,66 @@ export default function HomeScreen({ navigation }) {
           </View>
         </TouchableOpacity>
 
-        {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#7EC7FF" />
-          </View>
-        )}
-
-        {error && (
-          <Text style={styles.errorText}>{error}</Text>
-        )}
+        {loading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color="#7EC7FF" /></View>}
+        {error && <Text style={styles.errorText}>{error}</Text>}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F2F2F2',
-    paddingTop: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
-  logo: {
-    width: 130,
-    height: 40,
-  },
-  profileIcon: {
-    marginLeft: 'auto',
-  },
+  container: { flex: 1, paddingTop: 40 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 },
+  logo: { width: 130, height: 40 },
+  profileIcon: { marginLeft: 'auto' },
   searchContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    borderRadius: 24,
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    elevation: 2,
+    flexDirection: 'row', marginHorizontal: 16, borderRadius: 24, alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 6, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 8,
   },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingRight: 8,
-    fontSize: 14,
-    color: '#444',
-  },
-  searchButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#7EC7FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
+  searchInput: { flex: 1, paddingVertical: 8, paddingRight: 8, fontSize: 14 },
+  searchButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#7EC7FF', justifyContent: 'center', alignItems: 'center' },
+  content: { padding: 16, paddingBottom: 40 },
   locationCard: {
-    backgroundColor: '#EDEDED',
-    borderRadius: 20,
-    padding: 12,
-    flexDirection: 'row',
-    marginBottom: 12,
+    borderRadius: 24, padding: 16, flexDirection: 'row', marginBottom: 16,
+    elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12,
   },
-  locationLeft: {
-    flex: 2,
-  },
-  locationLabel: {
-    fontSize: 13,
-    color: '#888',
-  },
-  locationCity: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  mapPreview: {
-    height: 80,
-    borderRadius: 14,
-    backgroundColor: '#D7D7D7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mapText: {
-    color: '#777',
-    fontSize: 12,
-  },
-  weatherCard: {
-    flex: 1.5,
-    marginLeft: 10,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  weatherTemp: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  weatherDesc: {
-    fontSize: 13,
-    color: '#777',
-    marginTop: 4,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 10,
-  },
+  locationLeft: { flex: 2, justifyContent: 'center' },
+  locationLabel: { fontSize: 14, marginBottom: 4 },
+  locationCity: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  mapPreview: { height: 90, borderRadius: 16, overflow: 'hidden' },
+  glassOverlay: { ...StyleSheet.absoluteFillObject },
+  mapPreviewContent: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+  previewMarker: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#FFF', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 3, elevation: 4 },
+  mapText: { fontSize: 12, fontWeight: '700', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: {width: 0, height: 1}, textShadowRadius: 2 },
+  weatherCard: { flex: 1.5, marginLeft: 12, borderRadius: 20, justifyContent: 'center', alignItems: 'center', paddingVertical: 16 },
+  weatherIcon: { width: 60, height: 60 },
+  weatherTemp: { fontSize: 26, fontWeight: '800' },
+  weatherDesc: { fontSize: 13, marginTop: 2, fontWeight: '600', textTransform: 'capitalize' },
+  metricsRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 12, paddingBottom: 5 },
   metricCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 20,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 85, borderRadius: 20, paddingVertical: 16, paddingHorizontal: 4, marginRight: 12,
+    alignItems: 'center', justifyContent: 'center', elevation: 3, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8,
   },
-  metricLabel: {
-    fontSize: 12,
-    color: '#777',
-  },
-  metricValue: {
-    marginTop: 4,
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  iconCircle: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  metricLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4 },
+  metricValue: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
   newsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 30,
-    marginTop: 14,
+    borderRadius: 24, padding: 24, marginTop: 16, elevation: 3, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, flexDirection: 'row', alignItems: 'center',
   },
-  newsContent: {},
-  newsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  newsSubtitle: {
-    fontSize: 12,
-    color: '#777',
-  },
+  newsContent: { flex: 1 },
+  newsTitle: { fontSize: 17, fontWeight: '700', marginBottom: 6 },
+  newsSubtitle: { fontSize: 13 },
   exploreCard: {
-    marginTop: 14,
-    borderRadius: 22,
-    overflow: 'hidden',
-    height: 180,
+    marginTop: 20, borderRadius: 24, overflow: 'hidden', height: 200, elevation: 4, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10,
   },
-  exploreImage: {
-    width: '100%',
-    height: '100%',
-  },
-  exploreOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  exploreTextWrapper: {
-    position: 'absolute',
-    left: 20,
-    bottom: 30,
-  },
-  exploreText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  loadingOverlay: {
-    marginTop: 10,
-  },
-  errorText: {
-    marginTop: 10,
-    color: 'red',
-    textAlign: 'center',
-  },
+  exploreImage: { width: '100%', height: '100%' },
+  exploreOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
+  exploreTextWrapper: { position: 'absolute', left: 20, bottom: 30 },
+  exploreText: { color: '#fff', fontSize: 22, fontWeight: '700' },
+  loadingOverlay: { marginTop: 10 },
+  errorText: { marginTop: 10, color: 'red', textAlign: 'center' },
 });

@@ -1,5 +1,5 @@
 // src/screens/ProfileScreen.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   ScrollView,
   Switch,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 
 import * as ImagePicker from 'expo-image-picker';
 import { auth } from '../config/firebaseConfig';
@@ -20,55 +22,62 @@ import {
   uploadBytes,
   getDownloadURL,
 } from 'firebase/storage';
-import { updateProfile } from 'firebase/auth';
-
-/* 🌗 THEMES */
-const lightTheme = {
-  background: '#EDEDED',
-  card: '#FFFFFF',
-  text: '#333',
-  subText: '#777',
-};
-
-const darkTheme = {
-  background: '#121212',
-  card: '#1E1E1E',
-  text: '#FFFFFF',
-  subText: '#AAAAAA',
-};
+import { updateProfile, signOut } from 'firebase/auth';
+import { ThemeContext } from '../context/ThemeContext';
 
 export default function ProfileScreen({ navigation, setIsLoggedIn }) {
+  const { isDarkMode, toggleDarkMode, theme } = useContext(ThemeContext);
   const [userProfile, setUserProfile] = useState(null);
-  const [darkMode, setDarkMode] = useState(false);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const theme = darkMode ? darkTheme : lightTheme;
-
   useEffect(() => {
     const current = auth.currentUser;
-
     if (!current) return;
 
     setImage(current.photoURL);
 
+    // Initial profile state
     const profile = {
       name: current.displayName || 'Navilux Traveller',
       email: current.email || 'user@example.com',
-      city: 'Unknown city',
+      city: 'Detecting...',
       trips: 0,
       savedPlaces: 0,
       daysActive: 0,
     };
-
     setUserProfile(profile);
-    setLoading(false);
+
+    // Fetch actual location
+    (async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setUserProfile(prev => ({ ...prev, city: 'Permission Denied' }));
+          setLoading(false);
+          return;
+        }
+
+        const loc = await Location.getCurrentPositionAsync({});
+        const geo = await Location.reverseGeocodeAsync({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude
+        });
+
+        const detectedCity = geo[0]?.city || geo[0]?.region || 'Unknown city';
+        setUserProfile(prev => ({ ...prev, city: detectedCity }));
+      } catch (error) {
+        console.error('Error fetching location:', error);
+        setUserProfile(prev => ({ ...prev, city: 'Location Error' }));
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   /* 📸 Pick Image */
   const pickImage = async () => {
-    const permission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
       alert('Permission required');
@@ -113,7 +122,7 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
   /* 🚪 Logout */
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      await signOut(auth);
       setIsLoggedIn(false); // 🔥 IMPORTANT
     } catch (err) {
       console.log(err);
@@ -122,131 +131,141 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
 
   if (loading || !userProfile) {
     return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' },
-        ]}
-      >
-        <ActivityIndicator size="large" color="#7EC7FF" />
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   const user = userProfile;
+  // Provide random user avatar if user has no photo
+  const defaultAvatarUrl = `https://i.pravatar.cc/200?u=${user.email}`;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       
       {/* Top Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.topTitle, { color: theme.text }]}>Profile</Text>
-        <Ionicons name="create-outline" size={22} color={theme.text} />
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="create-outline" size={24} color={theme.text} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
         {/* Header */}
-        <View style={[styles.headerCard, { backgroundColor: theme.card }]}>
-          
-          <View style={styles.avatarWrapper}>
-            <Image
-              source={
-                image
-                  ? { uri: image }
-                  : require('../../assets/avatar-placeholder.png')
-              }
-              style={styles.avatar}
-            />
-            <TouchableOpacity style={styles.avatarEdit} onPress={pickImage}>
-              <Ionicons name="camera" size={14} color="#fff" />
+        <View style={[styles.headerCard, { backgroundColor: theme.card, shadowColor: '#000' }]}>
+          <View style={styles.avatarContainer}>
+            <View style={[styles.avatarWrapper, { borderColor: theme.background }]}>
+              <Image
+                source={{ uri: image || defaultAvatarUrl }}
+                style={styles.avatar}
+              />
+            </View>
+            <TouchableOpacity style={styles.avatarEdit} onPress={pickImage} activeOpacity={0.8}>
+              <Ionicons name="camera" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
 
           <Text style={[styles.name, { color: theme.text }]}>{user.name}</Text>
           <Text style={[styles.email, { color: theme.subText }]}>{user.email}</Text>
-          <Text style={[styles.city, { color: theme.subText }]}>{user.city}</Text>
+          <View style={[styles.cityBadge, { backgroundColor: theme.background }]}>
+            <Ionicons name="location" size={12} color={theme.primary} />
+            <Text style={[styles.city, { color: theme.subText }]}>{user.city}</Text>
+          </View>
         </View>
 
         {/* Preferences */}
-        <View style={[styles.section, { backgroundColor: theme.card }]}>
-          <Text style={[styles.sectionTitle, { color: theme.subText }]}>
-            Preferences
-          </Text>
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: '#000' }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subText }]}>Preferences</Text>
 
           <View style={styles.row}>
-            <Text style={[styles.rowText, { color: theme.text }]}>
-              Dark mode
-            </Text>
-            <Switch value={darkMode} onValueChange={setDarkMode} />
+            <View style={styles.rowLeft}>
+              <Ionicons name="moon-outline" size={20} color={theme.text} style={styles.rowIcon} />
+              <Text style={[styles.rowText, { color: theme.text }]}>Dark mode</Text>
+            </View>
+            <Switch 
+              value={isDarkMode} 
+              onValueChange={toggleDarkMode} 
+              trackColor={{ false: '#767577', true: theme.primary }}
+              thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
+            />
           </View>
         </View>
 
         {/* Account */}
-        <View style={[styles.section, { backgroundColor: theme.card }]}>
-          <Text style={[styles.sectionTitle, { color: theme.subText }]}>
-            Account
-          </Text>
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: '#000' }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subText }]}>Account</Text>
 
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => navigation.navigate('PersonalInfo')}
-          >
-            <Text style={[styles.rowText, { color: theme.text }]}>
-              Personal Information
-            </Text>
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => navigation.navigate('PersonalInfo')}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="person-outline" size={20} color={theme.text} style={styles.rowIcon} />
+              <Text style={[styles.rowText, { color: theme.text }]}>Personal Information</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.subText} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => navigation.navigate('Security')}
-          >
-            <Text style={[styles.rowText, { color: theme.text }]}>
-              Security
-            </Text>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => navigation.navigate('Security')}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={theme.text} style={styles.rowIcon} />
+              <Text style={[styles.rowText, { color: theme.text }]}>Security</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.subText} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => navigation.navigate('TravelPreferences')}
-          >
-            <Text style={[styles.rowText, { color: theme.text }]}>
-              Travel Preferences
-            </Text>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => navigation.navigate('TravelPreferences')}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="airplane-outline" size={20} color={theme.text} style={styles.rowIcon} />
+              <Text style={[styles.rowText, { color: theme.text }]}>Travel Preferences</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.subText} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => navigation.navigate('Settings')}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="settings-outline" size={20} color={theme.text} style={styles.rowIcon} />
+              <Text style={[styles.rowText, { color: theme.text }]}>App Settings</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.subText} />
           </TouchableOpacity>
         </View>
 
         {/* Help */}
-        <View style={[styles.section, { backgroundColor: theme.card }]}>
-          <Text style={[styles.sectionTitle, { color: theme.subText }]}>
-            Help & About
-          </Text>
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: '#000' }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subText }]}>Help & About</Text>
 
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => navigation.navigate('FAQ')}
-          >
-            <Text style={[styles.rowText, { color: theme.text }]}>
-              FAQ
-            </Text>
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => navigation.navigate('FAQ')}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="help-circle-outline" size={20} color={theme.text} style={styles.rowIcon} />
+              <Text style={[styles.rowText, { color: theme.text }]}>FAQ</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.subText} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => navigation.navigate('About')}
-          >
-            <Text style={[styles.rowText, { color: theme.text }]}>
-              About Navilux
-            </Text>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => navigation.navigate('About')}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="information-circle-outline" size={20} color={theme.text} style={styles.rowIcon} />
+              <Text style={[styles.rowText, { color: theme.text }]}>About Navilux</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.subText} />
           </TouchableOpacity>
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
+        <TouchableOpacity style={[styles.logoutBtn, { backgroundColor: theme.danger }]} activeOpacity={0.8} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={22} color="#fff" />
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
 
@@ -258,88 +277,130 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
 
 /* 🎨 Styles */
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 40 },
-
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, paddingTop: Platform.OS === 'ios' ? 50 : 40 },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 10,
-  },
-
-  topTitle: { fontSize: 18, fontWeight: '600' },
-
-  content: { paddingHorizontal: 16 },
-
-  headerCard: {
-    borderRadius: 20,
-    padding: 20,
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  iconButton: {
+    padding: 4,
+  },
+  topTitle: { fontSize: 20, fontWeight: '700', letterSpacing: 0.5 },
+  content: { paddingHorizontal: 16, paddingBottom: 40 },
+  headerCard: {
+    borderRadius: 24,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 20,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+  },
+  avatarContainer: {
+    position: 'relative',
     marginBottom: 16,
   },
-
   avatarWrapper: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     overflow: 'hidden',
+    borderWidth: 4,
   },
-
   avatar: { width: '100%', height: '100%' },
-
   avatarEdit: {
     position: 'absolute',
     bottom: 0,
     right: 0,
     backgroundColor: '#7EC7FF',
-    borderRadius: 10,
-    padding: 4,
-  },
-
-  name: { fontSize: 18, fontWeight: '700', marginTop: 10 },
-
-  email: { fontSize: 13, marginTop: 2 },
-
-  city: { fontSize: 13, marginTop: 2 },
-
-  section: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    elevation: 2,
   },
-
+  name: { fontSize: 22, fontWeight: '800', marginBottom: 4 },
+  email: { fontSize: 14, marginBottom: 12 },
+  cityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  city: { fontSize: 13, fontWeight: '600', marginLeft: 4 },
+  section: {
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+  },
   sectionTitle: {
     fontSize: 13,
-    marginBottom: 8,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 8,
+    marginBottom: 12,
   },
-
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    alignItems: 'center',
+    paddingVertical: 12,
   },
-
-  rowText: { fontSize: 14 },
-
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowIcon: {
+    marginRight: 12,
+    width: 24,
+    textAlign: 'center',
+  },
+  rowText: { fontSize: 16, fontWeight: '500' },
+  divider: {
+    height: 1,
+    width: '100%',
+    marginLeft: 1,
+  },
   logoutBtn: {
-    backgroundColor: '#FF5C5C',
-    borderRadius: 24,
-    padding: 12,
+    borderRadius: 28,
+    paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
+    marginTop: 10,
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-
   logoutText: {
     color: '#fff',
-    marginLeft: 6,
-    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-
   versionText: {
-    marginTop: 10,
+    marginTop: 20,
     textAlign: 'center',
-    fontSize: 11,
+    fontSize: 12,
     color: '#999',
+    fontWeight: '500',
   },
 });
