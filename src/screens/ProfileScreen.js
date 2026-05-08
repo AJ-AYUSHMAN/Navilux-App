@@ -47,6 +47,7 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
       daysActive: 0,
     };
     setUserProfile(profile);
+    setLoading(false);
 
     // Fetch actual location
     (async () => {
@@ -54,7 +55,7 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setUserProfile(prev => ({ ...prev, city: 'Permission Denied' }));
-          setLoading(false);
+          //setLoading(false);
           return;
         }
 

@@ -263,7 +263,7 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity style={[styles.newsCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]} activeOpacity={0.8} onPress={() => navigation.navigate('News', { city: displayCity })}>
           <View style={styles.newsContent}>
             <Text style={[styles.newsTitle, { color: theme.text }]}>What’s happening in your area?</Text>
-            <Text style={[styles.newsSubtitle, { color: theme.subText }]}>Tap to view local news</Text>
+            <Text style={[styles.newsSubtitle, { color: theme.subText }]}>Tap to view news</Text>
           </View>
           <Ionicons name="newspaper-outline" size={32} color="#7EC7FF" />
         </TouchableOpacity>

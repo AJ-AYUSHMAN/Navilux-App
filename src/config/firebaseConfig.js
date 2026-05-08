@@ -12,7 +12,7 @@ import {FIREBASE_MESSAGING_SENDER_ID as messagingSenderId} from '@env';
 import {FIREBASE_APP_ID as appId} from '@env';
 import {FIREBASE_MEASUREMENT_ID as measurementId} from '@env';
 
-// Your web app's Firebase configuration
+// Web app's Firebase configuration
 const firebaseConfig = {
   apiKey: apiKey,
   authDomain: authDomain,
