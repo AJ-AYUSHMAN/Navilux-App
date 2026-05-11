@@ -2,7 +2,7 @@
   "expo": {
     "name": "Navilux",
     "slug": "navilux",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -23,6 +23,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "versionCode": 2,
       "edgeToEdgeEnabled": true,
       "package": "com.ajayushman.navilux",
       "googleServicesFile": "./google-services.json"

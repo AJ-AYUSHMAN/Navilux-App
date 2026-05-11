@@ -270,7 +270,7 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>App version 1.0.0</Text>
+        <Text style={styles.versionText}>App version 1.0.1</Text>
       </ScrollView>
     </View>
   );

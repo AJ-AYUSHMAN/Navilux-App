@@ -15,7 +15,7 @@ export default function OlaScreen({ navigation }) {
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Ola Cabs</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Open Ola Cabs</Text>
         </View>
         <TouchableOpacity style={styles.browserBtn} onPress={() => Linking.openURL('https://book.olacabs.com/')}>
           <Ionicons name="open-outline" size={24} color={theme.primary} />

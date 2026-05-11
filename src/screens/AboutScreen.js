@@ -31,13 +31,13 @@ export default function AboutScreen({ navigation }) {
 
       <View style={[styles.section, { backgroundColor: theme.card, shadowColor: isDarkMode ? '#FFF' : '#000', borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Version</Text>
-        <Text style={[styles.versionText, { color: theme.subText }]}>1.0.0 (Stable)</Text>
+        <Text style={[styles.versionText, { color: theme.subText }]}>1.0.1 (Stable)</Text>
       </View>
 
-      {/* <View style={[styles.section, { backgroundColor: theme.card, shadowColor: isDarkMode ? '#FFF' : '#000', borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border, marginTop: 15 }]}>
+      <View style={[styles.section, { backgroundColor: theme.card, shadowColor: isDarkMode ? '#FFF' : '#000', borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border, marginTop: 15 }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Developer</Text>
         <Text style={[styles.versionText, { color: theme.subText }]}>Ayushman Raj</Text>
-      </View> */}
+      </View>
     </ScrollView>
   );
 }
