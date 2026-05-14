@@ -4,6 +4,14 @@ import {
   useNavigationContainerRef,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+  'BloomFilter error',
+  'BloomFilterError',
+  '@firebase/firestore',
+  'Expo AV has been deprecated'
+]);
 import { ThemeProvider } from './src/context/ThemeContext';
 import { auth } from './src/config/firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -42,6 +50,11 @@ import TrainScreen from './src/screens/TrainScreen';
 import OlaScreen from './src/screens/OlaScreen';
 import CitySearchResultsScreen from './src/screens/CitySearchResultsScreen';
 import CityAnalysisScreen from './src/screens/CityAnalysisScreen';
+import DestinationAlertScreen from './src/screens/DestinationAlertScreen';
+import TripPlannerScreen from './src/screens/TripPlannerScreen';
+
+// Register background task
+import './src/services/locationAlertTask';
 
 import SettingsScreen from './src/screens/SettingsScreen';
 import AboutScreen from './src/screens/AboutScreen';
@@ -96,7 +109,24 @@ export default function App() {
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data;
-        console.log('🔔 Notification tapped, data:', data);
+        const actionId = response.actionIdentifier;
+        console.log('🔔 Notification tapped, action:', actionId, 'data:', data);
+
+        if (actionId === 'SNOOZE_5') {
+          Notifications.scheduleNotificationAsync({
+            content: response.notification.request.content,
+            trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5 * 60 },
+          });
+          return;
+        } else if (actionId === 'SNOOZE_15') {
+          Notifications.scheduleNotificationAsync({
+            content: response.notification.request.content,
+            trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 15 * 60 },
+          });
+          return;
+        } else if (actionId === 'DISMISS') {
+          return; // Stop and ignore
+        }
 
         // Navigate to a screen if the notification payload includes a screen name
         if (data?.screen && navigationRef.isReady()) {
@@ -132,6 +162,9 @@ export default function App() {
     'AuthStart',
     'Chat',
     'Map',
+    'Settings',
+    'TripPlanner',
+    'TravelPreferences'
   ];
 
   return (
@@ -167,7 +200,14 @@ export default function App() {
                 )}
               </Stack.Screen>
 
-              <Stack.Screen name="AuthStart" component={AuthStartScreen} />
+              <Stack.Screen name="AuthStart">
+                {(props) => (
+                  <AuthStartScreen
+                    {...props}
+                    setIsLoggedIn={setIsLoggedIn}
+                  />
+                )}
+              </Stack.Screen>
 
               <Stack.Screen name="Login">
                 {(props) => (
@@ -197,6 +237,7 @@ export default function App() {
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Map" component={MapScreen} />
               <Stack.Screen name="Weather" component={WeatherScreen} />
+              <Stack.Screen name="TripPlanner" component={TripPlannerScreen} />
 
               {/* Explore */}
               <Stack.Screen name="Explore" component={ExploreScreen} />
@@ -240,6 +281,7 @@ export default function App() {
               <Stack.Screen name="Train" component={TrainScreen} />
               <Stack.Screen name="Ola" component={OlaScreen} />
               <Stack.Screen name="CityAnalysis" component={CityAnalysisScreen} />
+              <Stack.Screen name="DestinationAlert" component={DestinationAlertScreen} />
 
               {/* Search */}
               <Stack.Screen

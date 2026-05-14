@@ -3,13 +3,22 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } 
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { ThemeContext } from '../context/ThemeContext';
+import DisclaimerModal from '../components/DisclaimerModal';
 
 export default function OlaScreen({ navigation }) {
   const { isDarkMode, theme } = useContext(ThemeContext);
   const [loading, setLoading] = useState(true);
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <DisclaimerModal
+        visible={showDisclaimer}
+        onClose={() => setShowDisclaimer(false)}
+        serviceName="Ola Cabs"
+        isDarkMode={isDarkMode}
+      />
+
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>

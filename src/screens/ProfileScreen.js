@@ -180,9 +180,9 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
           </View>
         </View>
 
-        {/* Preferences */}
+        {/* Themes */}
         <View style={[styles.section, { backgroundColor: theme.card, shadowColor: '#000' }]}>
-          <Text style={[styles.sectionTitle, { color: theme.subText }]}>Preferences</Text>
+          <Text style={[styles.sectionTitle, { color: theme.subText }]}>Themes</Text>
 
           <View style={styles.row}>
             <View style={styles.rowLeft}>
@@ -270,7 +270,7 @@ export default function ProfileScreen({ navigation, setIsLoggedIn }) {
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>App version 1.0.1</Text>
+        <Text style={styles.versionText}>App version 1.0.2</Text>
       </ScrollView>
     </View>
   );
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#7EC7FF',
+    backgroundColor: '#146baeff',
     width: 32,
     height: 32,
     borderRadius: 16,

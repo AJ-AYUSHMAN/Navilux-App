@@ -39,7 +39,7 @@ const BOTTOM_CATEGORIES = [
 export default function MapScreen({ route, navigation }) {
   const { isDarkMode, theme } = useContext(ThemeContext);
 
-  const [mode, setMode] = useState('EXPLORE'); 
+  const [mode, setMode] = useState(route.params?.alarmMode ? 'ALARM' : 'EXPLORE'); 
   const [searchText, setSearchText] = useState('');
   const [originText, setOriginText] = useState('Your Location');
   const [destText, setDestText] = useState('');
@@ -130,20 +130,18 @@ export default function MapScreen({ route, navigation }) {
            } catch (e) {}
         });
         
-        // For iOS window.postMessage compatibility
         window.addEventListener("message", function(event) {
             document.dispatchEvent(new MessageEvent("message", { data: event.data }));
         });
 
-        // Send map clicks back to React Native to dismiss keyboards/suggestions
-        map.on('click', function() {
+        map.on('click', function(e) {
             if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_CLICKED' }));
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_CLICKED', lat: e.latlng.lat, lng: e.latlng.lng }));
             }
         });
         map.on('dragstart', function() {
             if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_CLICKED' }));
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_DRAGGED' }));
             }
         });
       </script>
@@ -151,7 +149,6 @@ export default function MapScreen({ route, navigation }) {
     </html>
   `;
 
-  // Send coordinates to Leaflet map whenever they change
   useEffect(() => {
      if (webViewRef.current) {
         webViewRef.current.postMessage(JSON.stringify({
@@ -160,7 +157,6 @@ export default function MapScreen({ route, navigation }) {
      }
   }, [originCoord, destCoord, routeCoords]);
 
-  // Routing via free OSRM (Open Source Routing Machine) instead of Google
   const fetchRoute = async (origin, dest) => {
     if (!origin || !dest) return;
     try {
@@ -171,7 +167,7 @@ export default function MapScreen({ route, navigation }) {
         const coords = json.routes[0].geometry.coordinates.map(point => ({ latitude: point[1], longitude: point[0] }));
         setRouteCoords(coords);
       }
-    } catch (e) { console.warn("Routing API Error", e); }
+    } catch (e) { }
   };
 
   const bottomSheetAnim = useRef(new Animated.Value(0)).current;
@@ -280,7 +276,7 @@ export default function MapScreen({ route, navigation }) {
               }
               if (activeInput === 'search') {
                    setDestCoord(coord); 
-                   setMode('EXPLORE');
+                   if (mode !== 'ALARM') setMode('EXPLORE');
               }
           }
       } catch (e) {}
@@ -304,20 +300,13 @@ export default function MapScreen({ route, navigation }) {
   };
 
   const swapLocations = () => {
-      // Swap coordinates
       const tempCoord = originCoord;
       setOriginCoord(destCoord);
       setDestCoord(tempCoord);
-      
-      // Swap text
       const tempText = originText;
       setOriginText(destText);
       setDestText(tempText);
-      
-      // If both coordinates exist, fetch the reverse route
-      if (destCoord && tempCoord) {
-          fetchRoute(destCoord, tempCoord);
-      }
+      if (destCoord && tempCoord) fetchRoute(destCoord, tempCoord);
   };
 
   const centerUser = async () => {
@@ -331,11 +320,70 @@ export default function MapScreen({ route, navigation }) {
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(categoryLabel)}`);
   };
 
-  const openInGoogleMaps = () => {
-    if (destCoord) {
+  const openInGoogleMaps = async () => {
+    if (mode === 'NAVIGATE') {
+      let url = 'https://www.google.com/maps/dir/?api=1';
+      let currentLoc = null;
+
+      if ((!originCoord && originText === 'Your Location') || (!destCoord && destText === 'Your Location')) {
+         try { currentLoc = await Location.getCurrentPositionAsync({}); } catch(e) {}
+      }
+
+      const oLat = originCoord ? originCoord.latitude : (currentLoc ? currentLoc.coords.latitude : null);
+      const oLng = originCoord ? originCoord.longitude : (currentLoc ? currentLoc.coords.longitude : null);
+
+      const dLat = destCoord ? destCoord.latitude : (currentLoc ? currentLoc.coords.latitude : null);
+      const dLng = destCoord ? destCoord.longitude : (currentLoc ? currentLoc.coords.longitude : null);
+
+      if (oLat && oLng) url += `&origin=${oLat},${oLng}`;
+      if (dLat && dLng) url += `&destination=${dLat},${dLng}`;
+
+      Linking.openURL(url);
+    } else if (destCoord) {
       Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${destCoord.latitude},${destCoord.longitude}`);
     } else if (searchText) {
       Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchText)}`);
+    }
+  };
+
+  const confirmAlarmLocation = async () => {
+    if (!destCoord) return;
+    try {
+        const reverseGeocode = await Location.reverseGeocodeAsync({ latitude: destCoord.latitude, longitude: destCoord.longitude });
+        let finalName = searchText || 'Map Location';
+        let finalFullName = `${destCoord.latitude.toFixed(4)}, ${destCoord.longitude.toFixed(4)}`;
+        
+        if (reverseGeocode.length > 0) {
+             const place = reverseGeocode[0];
+             finalName = place.city || place.name || place.district || 'Selected Location';
+             finalFullName = `${place.name ? place.name + ', ' : ''}${place.city || place.district || ''}, ${place.region || ''}`.replace(/^[,\s]+|[,\s]+$/g, '');
+        }
+        
+        await AsyncStorage.setItem('@temp_alarm_location', JSON.stringify({
+            lat: destCoord.latitude, 
+            lng: destCoord.longitude, 
+            name: finalName, 
+            fullName: finalFullName 
+        }));
+        
+        if (route.params?.alarmMode) {
+            navigation.goBack();
+        } else {
+            navigation.navigate('DestinationAlert');
+        }
+    } catch(e) {
+        await AsyncStorage.setItem('@temp_alarm_location', JSON.stringify({
+            lat: destCoord.latitude, 
+            lng: destCoord.longitude, 
+            name: 'Map Location', 
+            fullName: 'Custom Pinned Location' 
+        }));
+        
+        if (route.params?.alarmMode) {
+            navigation.goBack();
+        } else {
+            navigation.navigate('DestinationAlert');
+        }
     }
   };
 
@@ -366,6 +414,14 @@ export default function MapScreen({ route, navigation }) {
                         Keyboard.dismiss();
                         setSuggestions([]);
                         setActiveInput('');
+                        if (mode === 'ALARM') {
+                           setDestCoord({ latitude: data.lat, longitude: data.lng });
+                           setSearchText(`${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}`);
+                        }
+                    } else if (data.type === 'MAP_DRAGGED') {
+                        Keyboard.dismiss();
+                        setSuggestions([]);
+                        setActiveInput('');
                     }
                 } catch(e) {}
             }}
@@ -373,15 +429,23 @@ export default function MapScreen({ route, navigation }) {
       </View>
 
       {/* --- 2. TOP UI LAYER --- */}
-      {mode === 'EXPLORE' ? (
+      {mode === 'EXPLORE' || mode === 'ALARM' ? (
         <View style={styles.topContainer}>
             <View style={[styles.searchBar, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => {
+                   if (mode === 'ALARM' && !route.params?.alarmMode) {
+                      setMode('EXPLORE');
+                      setDestCoord(null);
+                      setSearchText('');
+                   } else {
+                      navigation.goBack();
+                   }
+                }} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color={theme.text} />
                 </TouchableOpacity>
                 <TextInput
                     style={[styles.searchInput, { color: theme.text }]}
-                    placeholder="Search destination"
+                    placeholder={mode === 'ALARM' ? "Search alarm destination" : "Search destination"}
                     value={searchText}
                     onChangeText={(t) => onTextChange(t, 'search')}
                     onFocus={() => { 
@@ -393,7 +457,7 @@ export default function MapScreen({ route, navigation }) {
                 />
             </View>
 
-            {activeInput === '' && recentSearches.length > 0 && (
+            {activeInput === '' && recentSearches.length > 0 && mode !== 'ALARM' && (
                 <View style={styles.recentPillsContainer}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {recentSearches.map((item, index) => (
@@ -485,7 +549,7 @@ export default function MapScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* --- 3. BOTTOM SWIPE SHEET --- */}
+      {/* --- 3. BOTTOM SWIPE SHEET (Only in EXPLORE mode) --- */}
       {mode === 'EXPLORE' && !destCoord && (
         <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: bottomSheetAnim }], backgroundColor: theme.card, borderColor: theme.border, borderTopWidth: isDarkMode ? 1 : 0, borderLeftWidth: isDarkMode ? 1 : 0, borderRightWidth: isDarkMode ? 1 : 0 }]} {...panResponder.panHandlers}>
             <TouchableOpacity style={styles.dragHandleContainer} onPress={toggleSheet}>
@@ -508,20 +572,43 @@ export default function MapScreen({ route, navigation }) {
       )}
 
       {/* --- 4. BOTTOM CARDS & FABs --- */}
-      {destCoord && activeInput === '' && (
-          <View style={[styles.redirectCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]}>
+      {mode === 'ALARM' && (
+          <View style={[styles.redirectCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border, bottom: 35 }]}>
+              <View style={styles.redirectInfo}>
+                  <Ionicons name="alarm" size={24} color={theme.primary} />
+                  <Text style={[styles.redirectTitle, { color: theme.text }]} numberOfLines={1}>
+                     {destCoord ? (searchText || 'Location Selected') : 'Tap on map to drop pin'}
+                  </Text>
+              </View>
+              {destCoord && (
+                <TouchableOpacity style={[styles.googleMapsBtn, {backgroundColor: theme.text}]} onPress={confirmAlarmLocation}>
+                    <Text style={[styles.googleMapsBtnText, {color: theme.background}]}>Confirm Location</Text>
+                    <Ionicons name="checkmark-circle" size={20} color={theme.background} style={{marginLeft: 5}} />
+                </TouchableOpacity>
+              )}
+          </View>
+      )}
+
+      {(mode === 'EXPLORE' ? destCoord : (destCoord || originCoord)) && activeInput === '' && mode !== 'ALARM' && (
+          <View style={[styles.redirectCard, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border, bottom: 35 }]}>
               <View style={styles.redirectInfo}>
                   <Ionicons name="location" size={24} color="#EA4335" />
-                  <Text style={[styles.redirectTitle, { color: theme.text }]} numberOfLines={1}>{searchText || destText || 'Selected Location'}</Text>
+                  <Text style={[styles.redirectTitle, { color: theme.text }]} numberOfLines={1}>{mode === 'NAVIGATE' ? 'Route Ready' : (searchText || destText || 'Selected Location')}</Text>
               </View>
               <TouchableOpacity style={styles.googleMapsBtn} onPress={openInGoogleMaps}>
                   <MaterialIcons name="directions" size={20} color="#FFF" style={{marginRight: 5}} />
-                  <Text style={styles.googleMapsBtnText}>Open in Google Maps</Text>
+                  <Text style={styles.googleMapsBtnText}>{mode === 'NAVIGATE' ? 'Start in Maps' : 'Open in Google Maps'}</Text>
               </TouchableOpacity>
           </View>
       )}
 
-      <View style={[styles.fabContainer, mode === 'EXPLORE' && !destCoord ? { bottom: 275 } : { bottom: 35 }]}>
+      <View style={[styles.fabContainer, mode === 'EXPLORE' && !destCoord ? { bottom: 275 } : { bottom: mode === 'ALARM' ? 140 : 130 }]}>
+         {mode !== 'ALARM' && (
+             <TouchableOpacity style={[styles.fabSmall, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border, marginBottom: 8 }]} onPress={() => { setMode('ALARM'); setDestCoord(null); setSearchText(''); setDestText(''); }}>
+                <Ionicons name="alarm-outline" size={24} color={theme.text} />
+             </TouchableOpacity>
+         )}
+
          <TouchableOpacity style={[styles.fabSmall, { backgroundColor: theme.card, borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border, marginBottom: 8 }]} onPress={zoomIn}>
             <MaterialIcons name="add" size={24} color={theme.text} />
          </TouchableOpacity>
@@ -534,7 +621,7 @@ export default function MapScreen({ route, navigation }) {
          </TouchableOpacity>
 
          {mode === 'EXPLORE' && (
-             <TouchableOpacity style={[styles.fabLarge, { backgroundColor: isDarkMode ? '#8AB4F8' : theme.primary }]} onPress={startNavigationMode}>
+             <TouchableOpacity style={[styles.fabLarge, { backgroundColor: isDarkMode ? '#8AB4F8' : theme.primary, marginTop: 15 }]} onPress={startNavigationMode}>
                 <Ionicons name="navigate" size={26} color="#FFF" />
                 <Text style={styles.fabLabel}>GO</Text>
              </TouchableOpacity>
@@ -602,7 +689,7 @@ const styles = StyleSheet.create({
   gridLabel: { color: '#9AA0A6', fontSize: 11, textAlign: 'center', fontWeight: '500' },
 
   redirectCard: {
-      position: 'absolute', bottom: 35, left: 20, right: 90, backgroundColor: '#303134', padding: 15, borderRadius: 16,
+      position: 'absolute', left: 20, right: 90, backgroundColor: '#303134', padding: 15, borderRadius: 16,
       elevation: 8, shadowColor: '#000', shadowOpacity: 0.3, borderWidth: 1, borderColor: '#3C4043'
   },
   redirectInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
@@ -613,7 +700,7 @@ const styles = StyleSheet.create({
   fabContainer: { position: 'absolute', right: 15, alignItems: 'center' },
   fabSmall: {
     width: 50, height: 50, backgroundColor: '#303134', borderRadius: 25, justifyContent: 'center', alignItems: 'center', 
-    marginBottom: 15, elevation: 6, shadowColor: '#000', shadowOpacity: 0.3, borderWidth: 1, borderColor: '#3C4043'
+    elevation: 6, shadowColor: '#000', shadowOpacity: 0.3, borderWidth: 1, borderColor: '#3C4043'
   },
   fabLarge: {
     width: 60, height: 60, backgroundColor: '#8AB4F8', borderRadius: 20, justifyContent: 'center', alignItems: 'center', 

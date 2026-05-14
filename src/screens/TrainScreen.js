@@ -3,11 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } 
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { ThemeContext } from '../context/ThemeContext';
+import DisclaimerModal from '../components/DisclaimerModal';
 
 export default function TrainScreen({ navigation }) {
   const { isDarkMode, theme } = useContext(ThemeContext);
   const [activeTab, setActiveTab] = useState('PNR');
   const [loading, setLoading] = useState(true);
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
+  const [showStatusDisclaimer, setShowStatusDisclaimer] = useState(false);
 
   const urls = {
     PNR: 'https://www.indianrail.gov.in/enquiry/PNR/PnrEnquiry.html?locale=en',
@@ -16,6 +19,20 @@ export default function TrainScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <DisclaimerModal
+        visible={showDisclaimer}
+        onClose={() => setShowDisclaimer(false)}
+        serviceName="Indian Railways"
+        isDarkMode={isDarkMode}
+      />
+
+      <DisclaimerModal
+        visible={showStatusDisclaimer}
+        onClose={() => setShowStatusDisclaimer(false)}
+        serviceName="RailYatri"
+        isDarkMode={isDarkMode}
+      />
+
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
@@ -37,7 +54,7 @@ export default function TrainScreen({ navigation }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'STATUS' && { borderBottomColor: theme.primary }]}
-          onPress={() => { setActiveTab('STATUS'); setLoading(true); }}
+          onPress={() => { setActiveTab('STATUS'); setLoading(true); setShowStatusDisclaimer(true); }}
         >
           <Text style={[styles.tabText, { color: activeTab === 'STATUS' ? theme.primary : theme.subText }]}>Live Status</Text>
         </TouchableOpacity>

@@ -1,64 +1,144 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useContext } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ThemeContext } from '../context/ThemeContext';
 
 export default function PrivacyPolicyScreen({ navigation }) {
+  const { theme, isDarkMode } = useContext(ThemeContext);
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#333" />
+          <Ionicons name="chevron-back" size={28} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy Policy</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Privacy Policy</Text>
         <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.lastUpdated}>Last Updated: May 2026</Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.lastUpdated, { color: theme.subText }]}>Last Updated: May 2026</Text>
 
-        <Text style={styles.sectionTitle}>1. Data Collection</Text>
-        <Text style={styles.paragraph}>
-          Navilux collects information to provide better services to our users. We may collect your name, email address, travel preferences, and location data (if you grant us permission) to personalize your experience.
+        <Text style={[styles.introduction, { color: theme.text }]}>
+          Welcome to Navilux. Your privacy is important to us. This Privacy Policy explains how Navilux collects, uses, stores, and protects your information when you use our mobile application.
+          {"\n\n"}By using Navilux, you agree to the practices described in this Privacy Policy.
         </Text>
 
-        <Text style={styles.sectionTitle}>2. Use of Location Data</Text>
-        <Text style={styles.paragraph}>
-          We request background and foreground location access strictly to provide relevant, localized information (such as air quality, crime rates, and local news) for your immediate surroundings. We do not sell your location data.
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>1. Information We Collect</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          <Text style={styles.bold}>a) Location Information</Text>
+          {"\n"}Navilux may collect your device's foreground and background location to provide:
+          {"\n"}• Nearby places, route planning, and map navigation
+          {"\n"}• City analysis, weather, AQI, and travel recommendations
+          {"\n"}• <Text style={styles.bold}>Destination Alerts:</Text> If enabled, the App tracks your location in the background to calculate remaining distance and notify you when you near your destination. This tracking automatically stops once the alarm is triggered or manually turned off.
+          {"\n\n"}<Text style={styles.bold}>b) Account Information</Text>
+          {"\n"}When you sign in using Firebase Authentication or other login methods, we may collect:
+          {"\n"}• Name
+          {"\n"}• Email address
+          {"\n"}• Profile photo
+          {"\n\n"}<Text style={styles.bold}>c) Device & Usage Information</Text>
+          {"\n"}We may automatically collect:
+          {"\n"}• Device type
+          {"\n"}• Operating system version
+          {"\n"}• App performance and crash reports
+          {"\n"}• Analytics data
+          {"\n\n"}<Text style={styles.bold}>d) User Preferences & Trip Data</Text>
+          {"\n"}Navilux may store travel preferences, theme settings, saved searches, and app personalization settings. Additionally, any custom Trip Plans you generate are saved to your account. You have full control over this data and can view, manage, or delete your saved trips and account data at any time.
         </Text>
 
-        <Text style={styles.sectionTitle}>3. Third-Party Services</Text>
-        <Text style={styles.paragraph}>
-          Navilux utilizes third-party APIs (like Google Maps, OpenWeather, and Firebase) to process data. These services may collect information according to their own privacy policies. We do not control their tracking technologies.
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>2. How We Use Your Information</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          We use collected information to:
+          {"\n"}• Provide map and navigation services
+          {"\n"}• Generate AI-powered city analysis and travel insights
+          {"\n"}• Improve app functionality and user experience
+          {"\n"}• Personalize recommendations and nearby place suggestions
+          {"\n"}• Enhance security and prevent misuse
+          {"\n"}• Analyze app performance and crashes
         </Text>
 
-        <Text style={styles.sectionTitle}>4. Data Security</Text>
-        <Text style={styles.paragraph}>
-          Your account is secured via Firebase Authentication. We use industry-standard encryption protocols to protect your personal data and travel preferences stored in our databases.
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>3. Third-Party Services</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          Navilux uses trusted third-party APIs and services to provide functionality. These services may process limited information according to their own privacy policies:
+          {"\n"}• Google Firebase
+          {"\n"}• OpenWeather API
+          {"\n"}• Gemini API
+          {"\n"}• Geoapify API
+          {"\n"}• Ola Maps API
+          {"\n"}• GNews API
+          {"\n"}• Pexels API
+          {"\n"}• Expo Services
+          {"\n\n"}Navilux does not sell personal information to third parties.
         </Text>
 
-        <Text style={styles.sectionTitle}>5. Your Rights</Text>
-        <Text style={styles.paragraph}>
-          You have the right to access, update, or delete your personal data. You can delete your account directly from the Profile Settings page at any time, which will permanently erase your data from our servers.
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>4. WebView Content</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          Some sections of Navilux may display external websites or services using WebView technology. Navilux does not control the content, privacy practices, or policies of third-party websites displayed through WebView. Users are encouraged to review the privacy policies of those services separately.
+        </Text>
+
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>5. Data Storage & Security</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          We implement reasonable technical and organizational measures to protect user data. However, no internet transmission or electronic storage method is completely secure. We continuously work to improve security and data protection.
+        </Text>
+
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>6. Permissions Used</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          Navilux may request the following permissions:
+          {"\n"}• <Text style={styles.bold}>Location Permission</Text> → For maps, navigation, and nearby places
+          {"\n"}• <Text style={styles.bold}>Internet Access</Text> → For APIs and online services
+          {"\n"}• <Text style={styles.bold}>Storage/Photos Permission</Text> → For profile image uploads
+          {"\n"}• <Text style={styles.bold}>Notification Permission</Text> → For alerts and updates (if enabled)
+          {"\n\n"}Permissions are requested only when required.
+        </Text>
+
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>7. Children's Privacy</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          Navilux is not directed toward children under 13 years of age. We do not knowingly collect personal information from children.
+        </Text>
+
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>8. User Rights</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          Users may:
+          {"\n"}• Update account information
+          {"\n"}• Remove profile information
+          {"\n"}• Revoke app permissions from device settings
+          {"\n"}• Stop using the application at any time
+        </Text>
+
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>9. Changes to This Privacy Policy</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          We may update this Privacy Policy from time to time. Changes will be reflected by updating the "Last Updated" date. Continued use of Navilux after changes means acceptance of the updated policy.
+        </Text>
+
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>10. Contact Us</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          If you have questions regarding this Privacy Policy, you may contact:
+          {"\n"}Developer: Ayushman Raj
+          {"\n"}Email: ajayushmanraj@gmail.com
+        </Text>
+
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>11. Disclaimer</Text>
+        <Text style={[styles.paragraph, { color: theme.text }]}>
+          Navilux provides informational travel insights and AI-generated recommendations. Information such as safety analysis, AQI insights, weather conditions, travel suggestions, and route recommendations may not always be fully accurate or real-time. Users should independently verify important travel, safety, or emergency-related decisions.
+          {"\n\n"}© 2026 Navilux. All Rights Reserved.
         </Text>
 
         <View style={styles.footer} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingTop: Platform.OS === 'ios' ? 10 : 30,
     paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.05,
@@ -66,10 +146,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   backButton: { padding: 4, marginLeft: -4 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#333' },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
   content: { padding: 20 },
-  lastUpdated: { fontSize: 13, color: '#888', marginBottom: 20, fontStyle: 'italic' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#222', marginTop: 15, marginBottom: 8 },
-  paragraph: { fontSize: 15, color: '#555', lineHeight: 22, marginBottom: 10 },
-  footer: { height: 40 },
+  lastUpdated: { fontSize: 13, marginBottom: 20, fontStyle: 'italic' },
+  introduction: { fontSize: 15, lineHeight: 24, marginBottom: 20 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', marginTop: 15, marginBottom: 10 },
+  paragraph: { fontSize: 15, lineHeight: 24, marginBottom: 15 },
+  bold: { fontWeight: '700' },
+  footer: { height: 60 },
 });

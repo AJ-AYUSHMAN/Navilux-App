@@ -36,7 +36,7 @@ export default function ChatScreen({ route, navigation }) {
     {
       id: 'welcome',
       role: 'assistant',
-      text: "Hello! I'm your Navilux AI Assistant. I can check local data, give travel insights based on your preferences, or navigate you anywhere in the app!",
+      text: "Hello! I'm your Navilux AI Assistant. I can check local data, give travel insights based on your preferences, or navigate you anywhere in the app! As an AI assistant I can make mistakes.",
       ts: Date.now(),
     },
   ]);

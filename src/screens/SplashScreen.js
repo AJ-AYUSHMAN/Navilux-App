@@ -11,7 +11,7 @@ export default function SplashScreen({ navigation }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       navigation.replace('AuthStart'); // 🔥 go to AuthStart
-    }, 2000); // ⏱️ 2 seconds
+    }, 4000); // ⏱️ 4 seconds
 
     return () => clearTimeout(timer);
   }, []);
@@ -21,7 +21,7 @@ export default function SplashScreen({ navigation }) {
       <StatusBar hidden />
 
       <Image
-        source={require('../../assets/splash-logo.png')}
+        source={require('../../assets/nav.gif')}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 370,
-    height: 270,
+    width: 350, // Adjusted size for a GIF, can be tweaked
+    height: 350,
   },
 });

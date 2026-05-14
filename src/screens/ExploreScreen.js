@@ -1,5 +1,5 @@
 // src/screens/ExploreScreen.js
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,17 +10,23 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { GEOAPIFY_API_KEY as GEO_API_KEY, PEXELS_API_KEY } from '@env';
 import { ThemeContext } from '../context/ThemeContext';
 import { logScreenView, logAnalyticsEvent } from '../utils/analytics';
+import * as Haptics from 'expo-haptics';
 
 export default function ExploreScreen({ route, navigation }) {
-  const { theme, isDarkMode } = useContext(ThemeContext);
+  const { theme, isDarkMode, hapticsEnabled } = useContext(ThemeContext);
   const city = route?.params?.city || 'Phagwara';
 
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const lastVisibleIndex = useRef(0);
+  const hapticsRef = useRef(hapticsEnabled);
+
+  useEffect(() => { hapticsRef.current = hapticsEnabled; }, [hapticsEnabled]);
 
   useEffect(() => {
     logScreenView('ExploreScreen', 'ExploreScreen');
@@ -144,37 +150,59 @@ export default function ExploreScreen({ route, navigation }) {
     }
   };
 
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (viewableItems.length > 0) {
+      const topIndex = viewableItems[0].index;
+      if (topIndex !== lastVisibleIndex.current) {
+        lastVisibleIndex.current = topIndex;
+        if (hapticsRef.current) Haptics.selectionAsync();
+      }
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+
   // 🔥 Card UI
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: isDarkMode ? '#1E1E2D' : '#FFFFFF', borderColor: isDarkMode ? '#333' : '#E5E5E5', borderWidth: 1 }]}
+      activeOpacity={0.85}
+      onPress={() => {
+        if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        navigation.navigate('ExploreDetails', { place: item, city });
+      }}
+    >
       <Image source={{ uri: item.image }} style={styles.image} />
 
-      <View style={styles.overlay} />
+      <LinearGradient
+        colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.8)']}
+        style={styles.overlay}
+      />
 
       <View style={styles.infoTop}>
+        <View style={styles.ratingBadge}>
+          <Ionicons name="star" size={14} color="#FFD700" />
+          <Text style={styles.ratingText}>{item.rating}</Text>
+        </View>
+      </View>
+
+      <View style={styles.infoBottom}>
         <Text style={styles.placeTitle} numberOfLines={2}>
           {item.title}
         </Text>
-
         <Text style={styles.placeSubtitle} numberOfLines={1}>
           {item.subtitle}
         </Text>
+        <View style={styles.bottomRow}>
+          {item.distance && (
+            <View style={styles.metaBadge}>
+              <Ionicons name="location" size={14} color={theme.primary} />
+              <Text style={styles.metaText}>{item.distance}</Text>
+            </View>
+          )}
+        </View>
       </View>
-
-      <View style={styles.bottomRow}>
-        {item.distance && <Text style={styles.metaText}>📍 {item.distance}</Text>}
-        <Text style={styles.metaText}>⭐ {item.rating}</Text>
-      </View>
-
-      <TouchableOpacity
-        style={styles.detailsBtn}
-        onPress={() =>
-          navigation.navigate('ExploreDetails', { place: item, city })
-        }
-      >
-        <Text style={styles.detailsText}>Details</Text>
-      </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -206,6 +234,8 @@ export default function ExploreScreen({ route, navigation }) {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
         />
       )}
     </View>
@@ -223,18 +253,17 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 10,
+    paddingHorizontal: 20,
+    marginBottom: 16,
     justifyContent: 'space-between',
   },
 
   topTitle: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-    marginHorizontal: 8,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 
   listContent: {
@@ -251,64 +280,88 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     overflow: 'hidden',
-    marginBottom: 16,
-    backgroundColor: '#000',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   image: {
     width: '100%',
-    height: 220,
+    height: 260,
   },
 
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.25)',
   },
 
   infoTop: {
     position: 'absolute',
     top: 16,
-    left: 16,
     right: 16,
+  },
+
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backdropFilter: 'blur(10px)',
+  },
+
+  ratingText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 4,
+  },
+
+  infoBottom: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
   },
 
   placeTitle: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 19,
+    fontWeight: '800',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
 
   placeSubtitle: {
-    color: '#eee',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 13,
-    marginTop: 4,
+    fontWeight: '500',
+    marginBottom: 12,
   },
 
   bottomRow: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+  },
+
+  metaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
 
   metaText: {
     color: '#fff',
     fontSize: 12,
-  },
-
-  detailsBtn: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    backgroundColor: '#000',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-
-  detailsText: {
-    color: '#fff',
     fontWeight: '600',
+    marginLeft: 4,
   },
 });

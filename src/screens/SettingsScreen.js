@@ -6,9 +6,10 @@ import { ThemeContext } from '../context/ThemeContext';
 import { scheduleLocalNotification } from '../services/notificationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import * as Haptics from 'expo-haptics';
 
 export default function SettingsScreen({ navigation }) {
-  const { isDarkMode, theme } = useContext(ThemeContext);
+  const { isDarkMode, theme, isModernUI, toggleModernUI, hapticsEnabled, toggleHaptics } = useContext(ThemeContext);
   const [locationAccess, setLocationAccess] = useState(false);
   const [personalizedSuggestions, setPersonalizedSuggestions] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -92,6 +93,14 @@ export default function SettingsScreen({ navigation }) {
     Alert.alert('Notification Sent', 'A test notification will appear in 2 seconds.');
   };
 
+  const handleToggleHaptics = () => {
+    if (!hapticsEnabled) {
+      // Turning ON — give a preview buzz
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    toggleHaptics();
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
@@ -103,6 +112,30 @@ export default function SettingsScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {/* 🎨 Appearance Section */}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="color-palette-outline" size={20} color={theme.primary} />
+            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0, marginLeft: 8 }]}>
+              Appearance
+            </Text>
+          </View>
+
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={[styles.rowText, { color: theme.text }]}>Modern UI</Text>
+              <Text style={[styles.rowHint, { color: theme.subText }]}>Use the new premium glassmorphic interface on the Home Screen.</Text>
+            </View>
+            <Switch
+              value={isModernUI}
+              onValueChange={toggleModernUI}
+              trackColor={{ false: '#767577', true: theme.primary }}
+              thumbColor={isModernUI ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+        </View>
+
+        {/* 📍 Location & Privacy Section */}
         <View style={[styles.section, { backgroundColor: theme.card }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Location & Privacy</Text>
 
@@ -173,6 +206,29 @@ export default function SettingsScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* 📳 Haptics Section */}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="phone-portrait-outline" size={20} color={theme.primary} />
+            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0, marginLeft: 8 }]}>
+              Haptic Feedback
+            </Text>
+          </View>
+
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={[styles.rowText, { color: theme.text }]}>Vibration feedback</Text>
+              <Text style={[styles.rowHint, { color: theme.subText }]}>Feel subtle vibrations on scroll and tap</Text>
+            </View>
+            <Switch
+              value={hapticsEnabled}
+              onValueChange={handleToggleHaptics}
+              trackColor={{ false: '#767577', true: theme.primary }}
+              thumbColor={hapticsEnabled ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -216,6 +272,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rowText: { fontSize: 15, fontWeight: '500' },
+  rowHint: { fontSize: 12, marginTop: 2 },
   testButton: {
     flexDirection: 'row',
     alignItems: 'center',

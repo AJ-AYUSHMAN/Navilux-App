@@ -17,7 +17,7 @@ export default function AboutScreen({ navigation }) {
       </View>
 
       <View style={styles.logoContainer}>
-         <Image source={require('../../assets/splash-logo.png')} style={styles.logo} resizeMode="contain" />
+         <Image source={isDarkMode ? require('../../assets/splash-logo2.png') : require('../../assets/splash-logo.png')} style={styles.logo} resizeMode="contain" />
       </View>
 
       <Text style={[styles.text, { color: theme.text }]}>
@@ -31,7 +31,7 @@ export default function AboutScreen({ navigation }) {
 
       <View style={[styles.section, { backgroundColor: theme.card, shadowColor: isDarkMode ? '#FFF' : '#000', borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Version</Text>
-        <Text style={[styles.versionText, { color: theme.subText }]}>1.0.1 (Stable)</Text>
+        <Text style={[styles.versionText, { color: theme.subText }]}>1.0.2 (Stable)</Text>
       </View>
 
       <View style={[styles.section, { backgroundColor: theme.card, shadowColor: isDarkMode ? '#FFF' : '#000', borderWidth: isDarkMode ? 1 : 0, borderColor: theme.border, marginTop: 15 }]}>

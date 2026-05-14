@@ -35,9 +35,18 @@ export default function CrimeScreen({ route }) {
       const res = await fetch(API_BASE);
       const json = await res.json();
 
+      const dataArray = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : null);
+
+      if (!dataArray) {
+        setCrimeData(null);
+        setError('Invalid data format received from crime API.');
+        setLoading(false);
+        return;
+      }
+
       // Find the matching city entry (case-insensitive)
       const searchCity = (city || '').trim().toLowerCase();
-      const match = json.find(
+      const match = dataArray.find(
         (item) => item.City && item.City.trim().toLowerCase() === searchCity
       );
 

@@ -39,7 +39,7 @@ export default function FaqScreen({ navigation }) {
       ))}
 
       <Text style={[styles.text, { color: theme.subText }]}>
-        For more help, you can contact us at support@navilux.com
+        For more help, you can contact us at ajayushman@gmail.com
       </Text>
     </ScrollView>
   );

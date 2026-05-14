@@ -26,9 +26,19 @@ export default function NetworkScreen({ route }) {
       const res = await fetch(API_BASE);
       const json = await res.json();
 
+      // The API might return an array directly, or wrap it in an object like { data: [...] }
+      const dataArray = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : null);
+
+      if (!dataArray) {
+        setNetworkData(null);
+        setError('Invalid data format received from network API.');
+        setLoading(false);
+        return;
+      }
+
       // Find the matching city entry (case-insensitive)
       const searchCity = (city || '').trim().toLowerCase();
-      const match = json.find(
+      const match = dataArray.find(
         (item) => item.City && item.City.trim().toLowerCase() === searchCity
       );
 
